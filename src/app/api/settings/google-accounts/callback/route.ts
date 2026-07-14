@@ -3,7 +3,7 @@ import { google } from "googleapis";
 import { createOAuthClient } from "@/lib/google/oauth";
 import { encryptToken } from "@/lib/crypto";
 import { getCurrentUserId } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
 
 const ACCOUNT_COLOR_CYCLE = ["primary", "secondary", "tertiary"];
 
@@ -31,29 +31,36 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/settings?error=no_refresh_token", request.url));
   }
 
-  const supabase = getSupabaseAdmin();
-  const { count } = await supabase
-    .from("google_accounts")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  const colorKey = ACCOUNT_COLOR_CYCLE[(count ?? 0) % ACCOUNT_COLOR_CYCLE.length];
-
-  const { error } = await supabase.from("google_accounts").upsert(
-    {
-      user_id: userId,
-      google_email: profile.email,
-      account_label: profile.email,
-      color_key: colorKey,
-      access_token_encrypted: tokens.access_token ? encryptToken(tokens.access_token) : null,
-      refresh_token_encrypted: encryptToken(tokens.refresh_token),
-      token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
-      scopes: tokens.scope ?? null,
-    },
-    { onConflict: "user_id,google_email" }
+  const [{ count }] = await query<{ count: number }>(
+    "select count(*)::int as count from google_accounts where user_id = $1",
+    [userId]
   );
+  const colorKey = ACCOUNT_COLOR_CYCLE[count % ACCOUNT_COLOR_CYCLE.length];
 
-  if (error) {
+  try {
+    await query(
+      `insert into google_accounts
+         (user_id, google_email, account_label, color_key, access_token_encrypted, refresh_token_encrypted, token_expiry, scopes)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (user_id, google_email) do update set
+         account_label = excluded.account_label,
+         color_key = excluded.color_key,
+         access_token_encrypted = excluded.access_token_encrypted,
+         refresh_token_encrypted = excluded.refresh_token_encrypted,
+         token_expiry = excluded.token_expiry,
+         scopes = excluded.scopes`,
+      [
+        userId,
+        profile.email,
+        profile.email,
+        colorKey,
+        tokens.access_token ? encryptToken(tokens.access_token) : null,
+        encryptToken(tokens.refresh_token),
+        tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+        tokens.scope ?? null,
+      ]
+    );
+  } catch {
     return NextResponse.redirect(new URL("/settings?error=save_failed", request.url));
   }
 

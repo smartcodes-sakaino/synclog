@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
+import type { ExtractedTask, Task } from "@/types";
 
 const schema = z.object({
   extractedTaskIds: z.array(z.string()).min(1),
@@ -12,40 +13,30 @@ export async function POST(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { extractedTaskIds } = schema.parse(await request.json());
-  const supabase = getSupabaseAdmin();
 
-  const { data: candidates, error } = await supabase
-    .from("extracted_tasks")
-    .select("*")
-    .eq("user_id", userId)
-    .in("id", extractedTaskIds)
-    .eq("status", "pending");
+  const candidates = await query<ExtractedTask>(
+    `select * from extracted_tasks
+     where user_id = $1 and id = any($2::uuid[]) and status = 'pending'`,
+    [userId, extractedTaskIds]
+  );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!candidates || candidates.length === 0) {
+  if (candidates.length === 0) {
     return NextResponse.json({ tasks: [] });
   }
 
-  const newTasks = candidates.map((c) => ({
-    user_id: userId,
-    title: c.title,
-    description: c.description,
-    due_date: c.suggested_due_date,
-    source: "minutes_extraction" as const,
-    source_ref: c.minute_source_id,
-  }));
+  const createdTasks: Task[] = [];
+  for (const c of candidates) {
+    const [task] = await query<Task>(
+      `insert into tasks (user_id, title, description, due_date, source, source_ref)
+       values ($1, $2, $3, $4, 'minutes_extraction', $5) returning *`,
+      [userId, c.title, c.description, c.suggested_due_date, c.minute_source_id]
+    );
+    createdTasks.push(task);
+  }
 
-  const { data: createdTasks, error: insertError } = await supabase
-    .from("tasks")
-    .insert(newTasks)
-    .select("*");
-
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
-
-  await supabase
-    .from("extracted_tasks")
-    .update({ status: "imported" })
-    .in("id", extractedTaskIds);
+  await query(`update extracted_tasks set status = 'imported' where id = any($1::uuid[])`, [
+    extractedTaskIds,
+  ]);
 
   return NextResponse.json({ tasks: createdTasks }, { status: 201 });
 }

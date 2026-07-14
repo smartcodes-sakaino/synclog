@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/crypto";
 import type { GoogleAccount } from "@/types";
 
@@ -57,13 +57,23 @@ export async function getAuthorizedClientForAccount(account: GoogleAccount & {
   });
 
   client.on("tokens", async (tokens) => {
-    const supabase = getSupabaseAdmin();
-    const update: Record<string, unknown> = {};
-    if (tokens.access_token) update.access_token_encrypted = encryptToken(tokens.access_token);
-    if (tokens.refresh_token) update.refresh_token_encrypted = encryptToken(tokens.refresh_token);
-    if (tokens.expiry_date) update.token_expiry = new Date(tokens.expiry_date).toISOString();
-    if (Object.keys(update).length > 0) {
-      await supabase.from("google_accounts").update(update).eq("id", account.id);
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+    if (tokens.access_token) {
+      setClauses.push(`access_token_encrypted = $${values.length + 1}`);
+      values.push(encryptToken(tokens.access_token));
+    }
+    if (tokens.refresh_token) {
+      setClauses.push(`refresh_token_encrypted = $${values.length + 1}`);
+      values.push(encryptToken(tokens.refresh_token));
+    }
+    if (tokens.expiry_date) {
+      setClauses.push(`token_expiry = $${values.length + 1}`);
+      values.push(new Date(tokens.expiry_date).toISOString());
+    }
+    if (setClauses.length > 0) {
+      values.push(account.id);
+      await query(`update google_accounts set ${setClauses.join(", ")} where id = $${values.length}`, values);
     }
   });
 

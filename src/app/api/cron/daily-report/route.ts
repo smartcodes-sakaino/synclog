@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { queryOne } from "@/lib/db";
 import { ALLOWED_LOGIN_EMAIL } from "@/lib/auth";
 import { generateDailyReport } from "@/lib/dailyReportService";
 
@@ -8,20 +8,16 @@ function todayInJST(): string {
   return formatter.format(new Date()); // "YYYY-MM-DD"形式
 }
 
-// Vercel Cron専用エンドポイント。平日17:30(JST)に呼び出される
-// (Vercel CronはデフォルトでGETリクエストを送信する)
+// 定時実行(Replit Scheduled Deployment)専用エンドポイント。平日17:30(JST)に呼び出される
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", ALLOWED_LOGIN_EMAIL)
-    .maybeSingle();
+  const user = await queryOne<{ id: string }>("select id from users where email = $1", [
+    ALLOWED_LOGIN_EMAIL,
+  ]);
 
   if (!user) {
     return NextResponse.json({ error: "user not found" }, { status: 404 });

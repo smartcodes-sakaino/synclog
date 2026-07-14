@@ -1,42 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
 import { summarizePeriod } from "@/lib/gemini";
-import type { TagBreakdownEntry } from "@/types";
+import type { ReviewSummary, TagBreakdownEntry } from "@/types";
 
 const schema = z.object({
   periodStart: z.string(),
   periodEnd: z.string(),
 });
 
+interface CompletedTaskRow {
+  title: string;
+  completed_at: string;
+  tag_names: string[];
+}
+
 export async function POST(request: NextRequest) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { periodStart, periodEnd } = schema.parse(await request.json());
-  const supabase = getSupabaseAdmin();
 
-  const { data: rows, error } = await supabase
-    .from("tasks")
-    .select("title, completed_at, task_tags(tags(name))")
-    .eq("user_id", userId)
-    .eq("status", "done")
-    .gte("completed_at", `${periodStart}T00:00:00+09:00`)
-    .lte("completed_at", `${periodEnd}T23:59:59+09:00`);
+  const tasks = await query<CompletedTaskRow>(
+    `select t.title, t.completed_at,
+       coalesce(json_agg(tg.name) filter (where tg.name is not null), '[]') as tag_names
+     from tasks t
+     left join task_tags tt on tt.task_id = t.id
+     left join tags tg on tg.id = tt.tag_id
+     where t.user_id = $1 and t.status = 'done'
+       and t.completed_at >= $2 and t.completed_at <= $3
+     group by t.id`,
+    [userId, `${periodStart}T00:00:00+09:00`, `${periodEnd}T23:59:59+09:00`]
+  );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  type Row = {
-    title: string;
-    completed_at: string;
-    task_tags: { tags: { name: string } | null }[];
-  };
-
-  const tasks = (rows ?? []) as unknown as Row[];
   const tasksForAI = tasks.map((t) => ({
     title: t.title,
-    tags: t.task_tags.map((tt) => tt.tags?.name).filter((n): n is string => Boolean(n)),
+    tags: t.tag_names,
     completedAt: t.completed_at,
   }));
 
@@ -55,18 +55,11 @@ export async function POST(request: NextRequest) {
     percentage: Math.round((count / totalTagged) * 1000) / 10,
   }));
 
-  const { data: saved, error: saveError } = await supabase
-    .from("review_summaries")
-    .insert({
-      user_id: userId,
-      period_start: periodStart,
-      period_end: periodEnd,
-      summary_text: summaryText,
-      tag_breakdown: tagBreakdown,
-    })
-    .select("*")
-    .single();
+  const [reviewSummary] = await query<ReviewSummary>(
+    `insert into review_summaries (user_id, period_start, period_end, summary_text, tag_breakdown)
+     values ($1, $2, $3, $4, $5::jsonb) returning *`,
+    [userId, periodStart, periodEnd, summaryText, JSON.stringify(tagBreakdown)]
+  );
 
-  if (saveError) return NextResponse.json({ error: saveError.message }, { status: 500 });
-  return NextResponse.json({ reviewSummary: saved });
+  return NextResponse.json({ reviewSummary });
 }

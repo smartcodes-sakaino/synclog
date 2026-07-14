@@ -1,5 +1,6 @@
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { queryOne } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import type { User } from "@/types";
 
 export const ALLOWED_LOGIN_EMAIL = process.env.ALLOWED_LOGIN_EMAIL ?? "";
 
@@ -10,22 +11,14 @@ export async function getCurrentUserId(): Promise<string | null> {
 }
 
 // ログイン許可されたメールアドレスに対応するユーザーレコードを取得(なければ作成)する
-export async function findOrCreateUserByEmail(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: existing } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .maybeSingle();
-
+export async function findOrCreateUserByEmail(email: string): Promise<User> {
+  const existing = await queryOne<User>("select * from users where email = $1", [email]);
   if (existing) return existing;
 
-  const { data: created, error } = await supabase
-    .from("users")
-    .insert({ email, display_name: email.split("@")[0] })
-    .select("*")
-    .single();
-
-  if (error) throw error;
+  const created = await queryOne<User>(
+    "insert into users (email, display_name) values ($1, $2) returning *",
+    [email, email.split("@")[0]]
+  );
+  if (!created) throw new Error("ユーザーの作成に失敗しました");
   return created;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ExtractedTask, MinuteSource } from "@/types";
 
-type SourceWithCount = MinuteSource & { extracted_tasks?: { count: number }[] };
+type SourceWithCount = MinuteSource & { extracted_task_count: number };
 
 export default function MinutesClient() {
   const [docUrl, setDocUrl] = useState("");
@@ -173,7 +173,7 @@ export default function MinutesClient() {
                     {s.type === "recurring" ? "定例・自動" : "手動"}
                   </span>
                   <span className="text-xs font-bold text-on-surface bg-surface-container-high px-2 py-1 rounded-full">
-                    {s.extracted_tasks?.[0]?.count ?? 0} tasks
+                    {s.extracted_task_count} tasks
                   </span>
                 </div>
               </div>

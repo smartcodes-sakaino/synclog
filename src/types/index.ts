@@ -6,6 +6,13 @@ export type DailyReportStatus = "draft_created" | "skipped" | "failed" | "pendin
 export type MinuteSourceType = "recurring" | "adhoc";
 export type ExtractedTaskStatus = "pending" | "imported" | "dismissed";
 
+export interface User {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+}
+
 export interface Tag {
   id: string;
   user_id: string;

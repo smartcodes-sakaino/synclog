@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
+import type { FuzzyTask } from "@/types";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -15,17 +16,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
   const body = updateSchema.parse(await request.json());
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("fuzzy_tasks")
-    .update({ ...body, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select("*")
-    .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ fuzzyTask: data });
+  const setClauses: string[] = ["updated_at = now()"];
+  const values: unknown[] = [];
+  for (const [key, value] of Object.entries(body)) {
+    values.push(value);
+    setClauses.push(`${key} = $${values.length}`);
+  }
+  values.push(id, userId);
+
+  const [fuzzyTask] = await query<FuzzyTask>(
+    `update fuzzy_tasks set ${setClauses.join(", ")} where id = $${values.length - 1} and user_id = $${values.length} returning *`,
+    values
+  );
+
+  if (!fuzzyTask) return NextResponse.json({ error: "not found" }, { status: 404 });
+  return NextResponse.json({ fuzzyTask });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -33,9 +39,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("fuzzy_tasks").delete().eq("id", id).eq("user_id", userId);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await query("delete from fuzzy_tasks where id = $1 and user_id = $2", [id, userId]);
   return new NextResponse(null, { status: 204 });
 }

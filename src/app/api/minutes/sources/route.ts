@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
+import type { MinuteSource } from "@/types";
 
 const createSchema = z.object({
   docUrl: z.string().url(),
@@ -12,15 +13,17 @@ export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("minute_sources")
-    .select("*, extracted_tasks(count)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  const sources = await query<MinuteSource & { extracted_task_count: number }>(
+    `select ms.*, coalesce(count(et.id), 0)::int as extracted_task_count
+     from minute_sources ms
+     left join extracted_tasks et on et.minute_source_id = ms.id
+     where ms.user_id = $1
+     group by ms.id
+     order by ms.created_at desc`,
+    [userId]
+  );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ sources: data });
+  return NextResponse.json({ sources });
 }
 
 // 定例MTGの議事録ドキュメントを登録する(継続的にチェックする対象として保存)
@@ -29,13 +32,10 @@ export async function POST(request: NextRequest) {
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = createSchema.parse(await request.json());
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("minute_sources")
-    .insert({ user_id: userId, type: "recurring", doc_url: body.docUrl, title: body.title })
-    .select("*")
-    .single();
+  const [source] = await query<MinuteSource>(
+    "insert into minute_sources (user_id, type, doc_url, title) values ($1, 'recurring', $2, $3) returning *",
+    [userId, body.docUrl, body.title]
+  );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ source: data }, { status: 201 });
+  return NextResponse.json({ source }, { status: 201 });
 }

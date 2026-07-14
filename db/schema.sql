@@ -1,6 +1,6 @@
 -- SyncLog データベーススキーマ
 -- 設計書/DB設計書.xlsx に対応
--- Supabase SQL Editor、または `supabase db push` で実行する
+-- Replit PostgreSQL(Neon連携)に対して psql や SQL実行ツールで流し込む
 
 create extension if not exists pgcrypto;
 
@@ -113,8 +113,10 @@ create table if not exists extracted_tasks (
   created_at timestamptz not null default now()
 );
 
--- 個人利用の単一ユーザー構成のため、Row Level SecurityはService Roleキー経由(サーバーのみ)の
--- 書き込みのみを許可し、匿名/認証ユーザーからの直接アクセスは全テーブルで禁止する
+-- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
+-- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
+-- 将来的に閲覧専用ロール等を追加する場合に備え、防御的にRow Level Securityを有効化しておく
+-- (テーブル所有ロールはRLSの影響を受けないため、現状のアプリの挙動には影響しない)
 alter table users enable row level security;
 alter table google_accounts enable row level security;
 alter table tags enable row level security;
@@ -125,4 +127,3 @@ alter table daily_reports enable row level security;
 alter table review_summaries enable row level security;
 alter table minute_sources enable row level security;
 alter table extracted_tasks enable row level security;
--- ポリシーを一切作成しないことで、Service Roleキー以外からのアクセスをすべて拒否する

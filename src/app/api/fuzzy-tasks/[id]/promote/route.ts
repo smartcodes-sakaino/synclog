@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { query } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { getOrCreateTagsForUser } from "@/lib/tags";
+import type { Task } from "@/types";
 
 const promoteSchema = z.object({
   title: z.string().min(1),
@@ -18,31 +19,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { id } = await params;
   const body = promoteSchema.parse(await request.json());
-  const supabase = getSupabaseAdmin();
 
-  const { data: task, error } = await supabase
-    .from("tasks")
-    .insert({
-      user_id: userId,
-      title: body.title,
-      due_date: body.due_date ?? null,
-      priority: body.priority,
-    })
-    .select("*")
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const [task] = await query<Task>(
+    `insert into tasks (user_id, title, due_date, priority) values ($1, $2, $3, $4) returning *`,
+    [userId, body.title, body.due_date ?? null, body.priority]
+  );
 
   const tags = await getOrCreateTagsForUser(userId, body.tags);
   if (tags.length > 0) {
-    await supabase.from("task_tags").insert(tags.map((t) => ({ task_id: task.id, tag_id: t.id })));
+    const valuesSql = tags.map((_, i) => `($1, $${i + 2})`).join(", ");
+    await query(`insert into task_tags (task_id, tag_id) values ${valuesSql}`, [
+      task.id,
+      ...tags.map((t) => t.id),
+    ]);
   }
 
-  await supabase
-    .from("fuzzy_tasks")
-    .update({ status: "resolved", updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("user_id", userId);
+  await query(
+    "update fuzzy_tasks set status = 'resolved', updated_at = now() where id = $1 and user_id = $2",
+    [id, userId]
+  );
 
   return NextResponse.json({ task: { ...task, tags } }, { status: 201 });
 }
