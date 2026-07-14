@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import TagFolderCard from "@/components/TagFolderCard";
 import FuzzyTaskPanel from "@/components/FuzzyTaskPanel";
+import TagPicker from "@/components/TagPicker";
+import TaskDetailModal from "@/components/TaskDetailModal";
 import type { Task } from "@/types";
 
 export default function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTitle, setNewTitle] = useState("");
-  const [newTags, setNewTags] = useState("");
+  const [newTags, setNewTags] = useState<string[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   async function load() {
     const res = await fetch("/api/tasks");
@@ -25,13 +28,10 @@ export default function DashboardClient() {
     await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: newTitle,
-        tags: newTags.split(",").map((t) => t.trim()).filter(Boolean),
-      }),
+      body: JSON.stringify({ title: newTitle, tags: newTags }),
     });
     setNewTitle("");
-    setNewTags("");
+    setNewTags([]);
     load();
   }
 
@@ -68,22 +68,19 @@ export default function DashboardClient() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <section className="xl:col-span-2 flex flex-col gap-4">
-          <div className="bg-surface-container-lowest rounded-2xl p-4 card-shadow flex flex-col sm:flex-row gap-2">
-            <input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="新しいタスク名"
-              className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
-            />
-            <input
-              value={newTags}
-              onChange={(e) => setNewTags(e.target.value)}
-              placeholder="タグ(カンマ区切り)"
-              className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
-            />
-            <button onClick={addTask} className="bg-primary text-on-primary rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">
-              + New Task
-            </button>
+          <div className="bg-surface-container-lowest rounded-2xl p-4 card-shadow flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="新しいタスク名"
+                className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
+              />
+              <button onClick={addTask} className="bg-primary text-on-primary rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap">
+                + New Task
+              </button>
+            </div>
+            <TagPicker value={newTags} onChange={setNewTags} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -94,6 +91,7 @@ export default function DashboardClient() {
                 colorKey={group.colorKey}
                 tasks={group.tasks}
                 onToggleDone={toggleDone}
+                onSelectTask={setSelectedTask}
               />
             ))}
             {groups.size === 0 && (
@@ -106,6 +104,21 @@ export default function DashboardClient() {
           <FuzzyTaskPanel />
         </section>
       </div>
+
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onSaved={() => {
+            setSelectedTask(null);
+            load();
+          }}
+          onDeleted={() => {
+            setSelectedTask(null);
+            load();
+          }}
+        />
+      )}
     </main>
   );
 }

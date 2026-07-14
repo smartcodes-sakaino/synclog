@@ -48,7 +48,7 @@ export default function FuzzyTaskPanel() {
         </span>
       </div>
       <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-        社長からのふんわりした依頼...詳細を確認しましょう！
+        ふんわりした依頼...詳細を確認しましょう！
       </p>
 
       <div className="flex gap-2 mb-4">

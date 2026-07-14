@@ -17,11 +17,13 @@ export default function TagFolderCard({
   colorKey,
   tasks,
   onToggleDone,
+  onSelectTask,
 }: {
   tagName: string;
   colorKey: string;
   tasks: Task[];
   onToggleDone: (taskId: string, done: boolean) => void;
+  onSelectTask: (task: Task) => void;
 }) {
   const [open, setOpen] = useState(false);
   const colors = tagColorClasses(colorKey);
@@ -64,14 +66,18 @@ export default function TagFolderCard({
               checked={task.status === "done"}
               onChange={(e) => onToggleDone(task.id, e.target.checked)}
             />
-            <div className="flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => onSelectTask(task)}
+              className="flex-1 min-w-0 text-left"
+            >
               <p className={`text-body-md text-on-surface truncate ${task.status === "done" ? "line-through opacity-60" : ""}`}>
                 {task.title}
               </p>
               <p className="font-label-sm text-label-sm text-on-surface-variant">
                 {task.due_date ? task.due_date : "期限なし"}・{task.priority === "high" ? "高優先" : task.priority === "low" ? "低優先" : "中優先"}
               </p>
-            </div>
+            </button>
           </div>
         ))}
         {tasks.length === 0 && (
