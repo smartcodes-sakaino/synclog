@@ -2,11 +2,15 @@
   "name": "synclog",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint ."
+    "start": "next start -p ${PORT:-3000}",
+    "lint": "eslint .",
+    "cron:daily-report": "node scripts/run-daily-report-cron.mjs"
   },
   "dependencies": {
     "@google/genai": "2.11.0",
