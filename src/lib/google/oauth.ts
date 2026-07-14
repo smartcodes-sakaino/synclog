@@ -18,16 +18,25 @@ export const ACCOUNT_LINK_SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
 ];
 
-export function createOAuthClient() {
+export function createOAuthClient(redirectUri?: string) {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_OAUTH_REDIRECT_URI
+    redirectUri
   );
 }
 
-export function buildAuthUrl(scopes: string[], state: string) {
-  const client = createOAuthClient();
+// ログイン用とアカウント連携用でコールバック先のパスが異なるため、それぞれ別のリダイレクトURIを使う
+export function getLoginRedirectUri(): string {
+  return `${process.env.APP_BASE_URL}/api/auth/callback`;
+}
+
+export function getLinkRedirectUri(): string {
+  return `${process.env.APP_BASE_URL}/api/settings/google-accounts/callback`;
+}
+
+export function buildAuthUrl(scopes: string[], state: string, redirectUri: string) {
+  const client = createOAuthClient(redirectUri);
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",

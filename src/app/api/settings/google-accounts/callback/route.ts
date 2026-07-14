@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
-import { createOAuthClient } from "@/lib/google/oauth";
+import { createOAuthClient, getLinkRedirectUri } from "@/lib/google/oauth";
 import { encryptToken } from "@/lib/crypto";
 import { getCurrentUserId } from "@/lib/auth";
 import { query } from "@/lib/db";
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/settings?error=invalid_state", request.url));
   }
 
-  const client = createOAuthClient();
+  const client = createOAuthClient(getLinkRedirectUri());
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
 

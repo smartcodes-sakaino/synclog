@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { buildAuthUrl, ACCOUNT_LINK_SCOPES } from "@/lib/google/oauth";
+import { buildAuthUrl, getLinkRedirectUri, ACCOUNT_LINK_SCOPES } from "@/lib/google/oauth";
 import { getCurrentUserId } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   const state = randomBytes(16).toString("hex");
-  const url = buildAuthUrl(ACCOUNT_LINK_SCOPES, `link:${state}`);
+  const url = buildAuthUrl(ACCOUNT_LINK_SCOPES, `link:${state}`, getLinkRedirectUri());
   const res = NextResponse.redirect(url);
   res.cookies.set("oauth_link_state", state, {
     httpOnly: true,
