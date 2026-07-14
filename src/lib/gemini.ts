@@ -4,8 +4,8 @@ import type { WorkItem } from "@/types";
 const MODEL = "gemini-2.5-flash";
 
 function getClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY が設定されていません");
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY が設定されていません");
   return new GoogleGenAI({ apiKey });
 }
 
