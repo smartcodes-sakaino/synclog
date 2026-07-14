@@ -7,6 +7,13 @@ import { query } from "@/lib/db";
 
 const ACCOUNT_COLOR_CYCLE = ["primary", "secondary", "tertiary"];
 
+interface OAuthTokens {
+  access_token?: string | null;
+  refresh_token?: string | null;
+  expiry_date?: number | null;
+  scope?: string;
+}
+
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.redirect(new URL("/login", request.url));
@@ -21,13 +28,33 @@ export async function GET(request: NextRequest) {
   }
 
   const client = createOAuthClient(getLinkRedirectUri());
-  const { tokens } = await client.getToken(code);
+  let tokens: OAuthTokens;
+  try {
+    const result = await client.getToken(code);
+    tokens = result.tokens;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown error";
+    console.error("Google token exchange failed:", message);
+    return NextResponse.redirect(
+      new URL(`/settings?error=token_exchange_failed&detail=${encodeURIComponent(message)}`, request.url)
+    );
+  }
   client.setCredentials(tokens);
 
-  const oauth2 = google.oauth2({ version: "v2", auth: client });
-  const { data: profile } = await oauth2.userinfo.get();
+  let profileEmail: string | null | undefined;
+  try {
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const { data: profile } = await oauth2.userinfo.get();
+    profileEmail = profile.email;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown error";
+    console.error("Google userinfo fetch failed:", message);
+    return NextResponse.redirect(
+      new URL(`/settings?error=userinfo_failed&detail=${encodeURIComponent(message)}`, request.url)
+    );
+  }
 
-  if (!profile.email || !tokens.refresh_token) {
+  if (!profileEmail || !tokens.refresh_token) {
     return NextResponse.redirect(new URL("/settings?error=no_refresh_token", request.url));
   }
 
@@ -51,8 +78,8 @@ export async function GET(request: NextRequest) {
          scopes = excluded.scopes`,
       [
         userId,
-        profile.email,
-        profile.email,
+        profileEmail,
+        profileEmail,
         colorKey,
         tokens.access_token ? encryptToken(tokens.access_token) : null,
         encryptToken(tokens.refresh_token),
@@ -60,7 +87,8 @@ export async function GET(request: NextRequest) {
         tokens.scope ?? null,
       ]
     );
-  } catch {
+  } catch (err) {
+    console.error("Failed to save google_accounts row:", err);
     return NextResponse.redirect(new URL("/settings?error=save_failed", request.url));
   }
 

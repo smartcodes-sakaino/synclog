@@ -1,14 +1,15 @@
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_state: "ログイン処理に失敗しました。もう一度お試しください。",
   not_allowed: "このアプリはご本人専用です。許可されたGoogleアカウントでログインしてください。",
+  token_exchange_failed: "Googleとの認証に失敗しました。",
 };
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; detail?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, detail } = await searchParams;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -21,9 +22,10 @@ export default async function LoginPage({
           <p className="text-on-surface-variant mt-1">個人用タスク管理ツール</p>
         </div>
         {error && (
-          <p className="text-error text-sm bg-error-container text-on-error-container rounded-lg p-3 w-full">
-            {ERROR_MESSAGES[error] ?? "ログインできませんでした。"}
-          </p>
+          <div className="text-error text-sm bg-error-container text-on-error-container rounded-lg p-3 w-full text-left">
+            <p>{ERROR_MESSAGES[error] ?? "ログインできませんでした。"}</p>
+            {detail && <p className="mt-1 text-xs opacity-80 break-words">詳細: {detail}</p>}
+          </div>
         )}
         <a
           href="/api/auth/login"

@@ -15,17 +15,26 @@ export async function GET(request: NextRequest) {
   }
 
   const client = createOAuthClient(getLoginRedirectUri());
-  const { tokens } = await client.getToken(code);
-  client.setCredentials(tokens);
+  let profileEmail: string | null | undefined;
+  try {
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const { data: profile } = await oauth2.userinfo.get();
+    profileEmail = profile.email;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown error";
+    console.error("Google login token exchange failed:", message);
+    return NextResponse.redirect(
+      new URL(`/login?error=token_exchange_failed&detail=${encodeURIComponent(message)}`, request.url)
+    );
+  }
 
-  const oauth2 = google.oauth2({ version: "v2", auth: client });
-  const { data: profile } = await oauth2.userinfo.get();
-
-  if (!profile.email || profile.email !== ALLOWED_LOGIN_EMAIL) {
+  if (!profileEmail || profileEmail !== ALLOWED_LOGIN_EMAIL) {
     return NextResponse.redirect(new URL("/login?error=not_allowed", request.url));
   }
 
-  const user = await findOrCreateUserByEmail(profile.email);
+  const user = await findOrCreateUserByEmail(profileEmail);
 
   const session = await getSession();
   session.userId = user.id;
