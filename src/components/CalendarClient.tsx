@@ -22,6 +22,8 @@ import type { CalendarEvent } from "@/types";
 
 type ViewMode = "month" | "week" | "day";
 
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const ACCOUNT_DOT: Record<string, string> = {
   primary: "bg-primary-container border-primary/20 text-on-primary-container",
@@ -30,7 +32,7 @@ const ACCOUNT_DOT: Record<string, string> = {
 };
 
 export default function CalendarClient() {
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; email: string; colorKey: string }[]>([]);
@@ -225,25 +227,54 @@ export default function CalendarClient() {
           </div>
         )}
 
-        {viewMode === "day" && (
-          <div className="flex-grow p-6">
-            {loading && <p className="text-on-surface-variant text-sm">読み込み中...</p>}
-            {!loading && (eventsByDay.get(format(currentDate, "yyyy-MM-dd")) ?? []).length === 0 && (
-              <p className="text-on-surface-variant text-sm">この日の予定はありません</p>
-            )}
-            <div className="flex flex-col gap-3">
-              {(eventsByDay.get(format(currentDate, "yyyy-MM-dd")) ?? []).map((event) => (
-                <div key={event.id} className={`flex items-center gap-4 p-4 rounded-xl border-l-4 bg-surface-container-lowest card-shadow ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
-                  <span className="font-bold text-sm w-16 flex-shrink-0">
-                    {event.allDay ? "終日" : format(new Date(event.start), "HH:mm")}
-                  </span>
-                  <span className="text-on-surface">{event.title}</span>
-                  <span className="ml-auto text-xs text-on-surface-variant">{event.accountEmail}</span>
+        {viewMode === "day" && (() => {
+          const dayEvents = eventsByDay.get(format(currentDate, "yyyy-MM-dd")) ?? [];
+          const allDayEvents = dayEvents.filter((e) => e.allDay);
+          const timedEvents = dayEvents.filter((e) => !e.allDay);
+          const eventsByHour = new Map<number, CalendarEvent[]>();
+          for (const event of timedEvents) {
+            const hour = new Date(event.start).getHours();
+            if (!eventsByHour.has(hour)) eventsByHour.set(hour, []);
+            eventsByHour.get(hour)!.push(event);
+          }
+
+          return (
+            <div className="flex flex-col">
+              {allDayEvents.length > 0 && (
+                <div className="p-4 border-b border-outline-variant/20 flex flex-wrap gap-2 bg-surface-container-lowest">
+                  {allDayEvents.map((event) => (
+                    <span key={event.id} className={`text-xs font-bold px-3 py-1.5 rounded-full border-l-2 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
+                      終日・{event.title}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              )}
+              {loading && <p className="text-on-surface-variant text-sm p-6">読み込み中...</p>}
+              {!loading && dayEvents.length === 0 && (
+                <p className="text-on-surface-variant text-sm p-6">この日の予定はありません</p>
+              )}
+              {!loading && timedEvents.length > 0 && (
+                <div className="h-[600px] overflow-y-auto">
+                  {HOURS.map((hour) => (
+                    <div key={hour} className="flex border-b border-outline-variant/10 min-h-[56px]">
+                      <div className="w-16 flex-shrink-0 py-2 px-2 text-right font-label-sm text-label-sm text-on-surface-variant border-r border-outline-variant/10">
+                        {String(hour).padStart(2, "0")}:00
+                      </div>
+                      <div className="flex-1 p-2 flex flex-col gap-1.5">
+                        {(eventsByHour.get(hour) ?? []).map((event) => (
+                          <div key={event.id} className={`text-sm px-3 py-1.5 rounded-lg border-l-2 bg-surface-container-lowest card-shadow ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
+                            <span className="font-bold">{format(new Date(event.start), "HH:mm")}</span> {event.title}
+                            <span className="ml-2 text-xs text-on-surface-variant">{event.accountEmail}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {showCreateModal && (
