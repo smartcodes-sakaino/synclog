@@ -8,6 +8,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import type { Tag, Task } from "@/types";
 
 const UNTAGGED_KEY = "__untagged__";
+type StatusFilter = "all" | "active" | "done";
 
 export default function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -16,6 +17,7 @@ export default function DashboardClient() {
   const [newTags, setNewTags] = useState<string[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [draggedTagId, setDraggedTagId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
 
   async function loadTasks() {
     const res = await fetch("/api/tasks");
@@ -58,8 +60,14 @@ export default function DashboardClient() {
     });
   }
 
+  const filteredTasks = tasks.filter((t) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "done") return t.status === "done";
+    return t.status !== "done";
+  });
+
   const tasksByTagName = new Map<string, Task[]>();
-  for (const task of tasks) {
+  for (const task of filteredTasks) {
     const tagList = task.tags.length > 0 ? task.tags.map((t) => t.name) : [UNTAGGED_KEY];
     for (const tagName of tagList) {
       if (!tasksByTagName.has(tagName)) tasksByTagName.set(tagName, []);
@@ -116,6 +124,27 @@ export default function DashboardClient() {
               </button>
             </div>
             <TagPicker value={newTags} onChange={setNewTags} />
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <span className="font-label-sm text-label-sm text-on-surface-variant mr-1">フィルター:</span>
+            {([
+              { key: "active", label: "未対応" },
+              { key: "all", label: "すべて" },
+              { key: "done", label: "完了" },
+            ] as const).map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={`px-4 py-1.5 rounded-full font-label-sm text-label-sm transition-colors ${
+                  statusFilter === f.key
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container text-on-surface hover:bg-primary-container hover:text-on-primary-container border border-outline-variant/30"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
