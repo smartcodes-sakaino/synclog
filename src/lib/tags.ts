@@ -25,8 +25,8 @@ export async function getOrCreateTagsForUser(userId: string, tagNames: string[])
   const createdTags: Tag[] = [];
   for (let i = 0; i < toCreate.length; i++) {
     const [row] = await query<Tag>(
-      "insert into tags (user_id, name, color_key) values ($1, $2, $3) returning *",
-      [userId, toCreate[i], nextTagColor(count + i)]
+      "insert into tags (user_id, name, color_key, sort_order) values ($1, $2, $3, $4) returning *",
+      [userId, toCreate[i], nextTagColor(count + i), count + i]
     );
     createdTags.push(row);
   }

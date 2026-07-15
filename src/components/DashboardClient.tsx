@@ -5,22 +5,33 @@ import TagFolderCard from "@/components/TagFolderCard";
 import FuzzyTaskPanel from "@/components/FuzzyTaskPanel";
 import TagPicker from "@/components/TagPicker";
 import TaskDetailModal from "@/components/TaskDetailModal";
-import type { Task } from "@/types";
+import type { Tag, Task } from "@/types";
+
+const UNTAGGED_KEY = "__untagged__";
 
 export default function DashboardClient() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [newTitle, setNewTitle] = useState("");
   const [newTags, setNewTags] = useState<string[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [draggedTagId, setDraggedTagId] = useState<string | null>(null);
 
-  async function load() {
+  async function loadTasks() {
     const res = await fetch("/api/tasks");
     const data = await res.json();
     setTasks(data.tasks ?? []);
   }
 
+  async function loadTags() {
+    const res = await fetch("/api/tags");
+    const data = await res.json();
+    setTags(data.tags ?? []);
+  }
+
   useEffect(() => {
-    load();
+    loadTasks();
+    loadTags();
   }, []);
 
   async function addTask() {
@@ -32,7 +43,8 @@ export default function DashboardClient() {
     });
     setNewTitle("");
     setNewTags([]);
-    load();
+    loadTasks();
+    loadTags();
   }
 
   async function toggleDone(taskId: string, done: boolean) {
@@ -46,13 +58,36 @@ export default function DashboardClient() {
     });
   }
 
-  const groups = new Map<string, { colorKey: string; tasks: Task[] }>();
+  const tasksByTagName = new Map<string, Task[]>();
   for (const task of tasks) {
-    const tagList = task.tags.length > 0 ? task.tags : [{ id: "none", name: "未分類", color_key: "gray", user_id: "", created_at: "" }];
-    for (const tag of tagList) {
-      if (!groups.has(tag.name)) groups.set(tag.name, { colorKey: tag.color_key, tasks: [] });
-      groups.get(tag.name)!.tasks.push(task);
+    const tagList = task.tags.length > 0 ? task.tags.map((t) => t.name) : [UNTAGGED_KEY];
+    for (const tagName of tagList) {
+      if (!tasksByTagName.has(tagName)) tasksByTagName.set(tagName, []);
+      tasksByTagName.get(tagName)!.push(task);
     }
+  }
+
+  const untaggedCount = tasksByTagName.get(UNTAGGED_KEY)?.length ?? 0;
+
+  function handleDrop(targetTagId: string) {
+    if (!draggedTagId || draggedTagId === targetTagId) return;
+    setTags((prev) => {
+      const next = [...prev];
+      const fromIndex = next.findIndex((t) => t.id === draggedTagId);
+      const toIndex = next.findIndex((t) => t.id === targetTagId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+
+      fetch("/api/tags/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tagIds: next.map((t) => t.id) }),
+      });
+
+      return next;
+    });
+    setDraggedTagId(null);
   }
 
   return (
@@ -62,7 +97,7 @@ export default function DashboardClient() {
           こんにちは、今日もお疲れ様です！ ✨
         </h2>
         <p className="font-body-md text-body-md text-on-surface-variant">
-          タグごとにワークスペース分けされたタスク一覧です。
+          タグごとにワークスペース分けされたタスク一覧です。カード左のハンドルをドラッグして並び替えられます。
         </p>
       </div>
 
@@ -83,18 +118,38 @@ export default function DashboardClient() {
             <TagPicker value={newTags} onChange={setNewTags} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[...groups.entries()].map(([tagName, group]) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            {tags.map((tag) => (
+              <div
+                key={tag.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(tag.id)}
+                className={draggedTagId === tag.id ? "opacity-40" : ""}
+              >
+                <TagFolderCard
+                  tagName={tag.name}
+                  colorKey={tag.color_key}
+                  tasks={tasksByTagName.get(tag.name) ?? []}
+                  onToggleDone={toggleDone}
+                  onSelectTask={setSelectedTask}
+                  dragHandleProps={{
+                    draggable: true,
+                    onDragStart: () => setDraggedTagId(tag.id),
+                    onDragEnd: () => setDraggedTagId(null),
+                  }}
+                />
+              </div>
+            ))}
+            {untaggedCount > 0 && (
               <TagFolderCard
-                key={tagName}
-                tagName={tagName}
-                colorKey={group.colorKey}
-                tasks={group.tasks}
+                tagName="未分類"
+                colorKey="gray"
+                tasks={tasksByTagName.get(UNTAGGED_KEY) ?? []}
                 onToggleDone={toggleDone}
                 onSelectTask={setSelectedTask}
               />
-            ))}
-            {groups.size === 0 && (
+            )}
+            {tags.length === 0 && untaggedCount === 0 && (
               <p className="text-on-surface-variant col-span-2">まだタスクがありません。上のフォームから作成しましょう。</p>
             )}
           </div>
@@ -111,11 +166,11 @@ export default function DashboardClient() {
           onClose={() => setSelectedTask(null)}
           onSaved={() => {
             setSelectedTask(null);
-            load();
+            loadTasks();
           }}
           onDeleted={() => {
             setSelectedTask(null);
-            load();
+            loadTasks();
           }}
         />
       )}

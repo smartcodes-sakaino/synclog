@@ -30,6 +30,7 @@ create table if not exists tags (
   user_id uuid not null references users(id) on delete cascade,
   name text not null,
   color_key text not null,
+  sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   unique (user_id, name)
 );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import FuzzyTaskDetailModal from "@/components/FuzzyTaskDetailModal";
 import type { FuzzyTask } from "@/types";
 
 const CARD_STYLES = [
@@ -13,6 +14,7 @@ export default function FuzzyTaskPanel() {
   const [items, setItems] = useState<FuzzyTask[]>([]);
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<FuzzyTask | null>(null);
 
   async function load() {
     const res = await fetch("/api/fuzzy-tasks?status=open");
@@ -71,19 +73,40 @@ export default function FuzzyTaskPanel() {
           <p className="text-label-sm text-on-surface-variant">今のところありません</p>
         )}
         {items.map((item, i) => (
-          <div
+          <button
             key={item.id}
-            className={`rounded-xl p-5 border shadow-sm ${CARD_STYLES[i % CARD_STYLES.length]}`}
+            onClick={() => setSelected(item)}
+            className={`text-left rounded-xl p-5 border shadow-sm hover:shadow-md transition-shadow ${CARD_STYLES[i % CARD_STYLES.length]}`}
           >
             <h4 className="font-body-lg text-body-lg mb-2">「{item.title}」</h4>
-            <div className="bg-surface/60 rounded-lg p-3 mb-4 min-h-[60px]">
+            <div className="bg-surface/60 rounded-lg p-3 mb-2 min-h-[60px]">
               <p className="text-sm text-on-surface-variant/80 italic">
                 {item.memo || "メモ: まだありません"}
               </p>
             </div>
-          </div>
+            <p className="text-xs text-on-surface-variant/70">クリックして編集・削除</p>
+          </button>
         ))}
       </div>
+
+      {selected && (
+        <FuzzyTaskDetailModal
+          fuzzyTask={selected}
+          onClose={() => setSelected(null)}
+          onSaved={() => {
+            setSelected(null);
+            load();
+          }}
+          onDeleted={() => {
+            setSelected(null);
+            load();
+          }}
+          onPromoted={() => {
+            setSelected(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
