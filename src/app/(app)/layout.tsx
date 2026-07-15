@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
-      <Sidebar userEmail={session.email} />
+      <Sidebar />
       <div className="md:ml-64 min-h-screen flex flex-col">{children}</div>
     </>
   );

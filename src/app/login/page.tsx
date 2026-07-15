@@ -14,9 +14,7 @@ export default async function LoginPage({
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="glass-panel rounded-2xl p-10 max-w-sm w-full text-center flex flex-col items-center gap-6">
-        <div className="w-14 h-14 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container">
-          <span className="material-symbols-outlined text-3xl">task_alt</span>
-        </div>
+        <img src="/icon.png" alt="SyncLog" className="w-14 h-14 rounded-xl object-cover" />
         <div>
           <h1 className="font-headline-md text-headline-md font-extrabold text-primary">SyncLog</h1>
           <p className="text-on-surface-variant mt-1">個人用タスク管理ツール</p>

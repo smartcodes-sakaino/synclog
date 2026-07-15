@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
      left join tags tg on tg.id = tt.tag_id
      where t.user_id = $1 ${statusClause}
      group by t.id
-     order by t.created_at desc`,
+     order by
+       case t.priority when 'high' then 1 when 'medium' then 2 else 3 end,
+       t.due_date asc nulls last,
+       t.created_at desc`,
     params
   );
 

@@ -33,10 +33,13 @@ async function getCalendarEventLinesForDate(userId: string, dateISO: string): Pr
     `${dateISO}T23:59:59+09:00`
   );
 
-  return events.map((e) => ({
-    time: e.allDay ? "終日" : e.start.slice(11, 16),
-    title: e.title,
-  }));
+  // 終日予定は日報には不要なため除外する
+  return events
+    .filter((e) => !e.allDay)
+    .map((e) => ({
+      time: e.start.slice(11, 16),
+      title: e.title,
+    }));
 }
 
 export interface DailyReportPreview {

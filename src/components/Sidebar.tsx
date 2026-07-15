@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
@@ -11,15 +11,19 @@ const NAV_ITEMS = [
   { href: "/minutes", label: "Minutes", icon: "edit_note" },
 ];
 
-export default function Sidebar({ userEmail }: { userEmail: string }) {
+export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   return (
     <nav className="fixed left-0 top-0 h-full w-64 bg-surface shadow-[20px_0_20px_rgba(134,78,90,0.04)] hidden md:flex flex-col p-base border-r border-outline-variant/20 z-50">
       <div className="px-container-padding py-base flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container">
-          <span className="material-symbols-outlined font-bold">task_alt</span>
-        </div>
+        <img src="/icon.png" alt="SyncLog" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
         <div>
           <h1 className="font-headline-md text-headline-md font-extrabold text-primary">SyncLog</h1>
           <p className="font-label-sm text-label-sm text-on-surface-variant font-normal">Creative Workspace</p>
@@ -63,12 +67,13 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
             </Link>
           </li>
         </ul>
-        <div className="px-container-padding py-4 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-[14px] font-bold">
-            {userEmail.charAt(0).toUpperCase()}
-          </div>
-          <span className="font-label-sm text-label-sm text-on-surface truncate">{userEmail}</span>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-container-padding py-3 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-error transition-colors font-label-sm text-label-sm"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          ログアウト
+        </button>
       </div>
     </nav>
   );
