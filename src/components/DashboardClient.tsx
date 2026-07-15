@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import TagFolderCard from "@/components/TagFolderCard";
 import FuzzyTaskPanel from "@/components/FuzzyTaskPanel";
 import TagPicker from "@/components/TagPicker";
@@ -10,15 +10,23 @@ import type { Tag, Task } from "@/types";
 const UNTAGGED_KEY = "__untagged__";
 type StatusFilter = "all" | "active" | "done";
 
-export default function DashboardClient() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+export default function DashboardClient({
+  initialTasks,
+  initialTags,
+}: {
+  initialTasks: Task[];
+  initialTags: Tag[];
+}) {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tags, setTags] = useState<Tag[]>(initialTags);
   const [newTitle, setNewTitle] = useState("");
   const [newTags, setNewTags] = useState<string[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [draggedTagId, setDraggedTagId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
 
+  // サーバーコンポーネント(page.tsx)で初回データを取得済みのため、
+  // マウント時の再フェッチはせず、更新操作の後だけ呼び出す
   async function loadTasks() {
     const res = await fetch("/api/tasks");
     const data = await res.json();
@@ -30,11 +38,6 @@ export default function DashboardClient() {
     const data = await res.json();
     setTags(data.tags ?? []);
   }
-
-  useEffect(() => {
-    loadTasks();
-    loadTags();
-  }, []);
 
   async function addTask() {
     if (!newTitle.trim()) return;

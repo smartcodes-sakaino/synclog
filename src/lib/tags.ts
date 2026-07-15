@@ -2,6 +2,12 @@ import { query } from "@/lib/db";
 import { nextTagColor } from "@/lib/tagColors";
 import type { Tag } from "@/types";
 
+export async function getTagsForUser(userId: string): Promise<Tag[]> {
+  return query<Tag>("select * from tags where user_id = $1 order by sort_order asc, created_at asc", [
+    userId,
+  ]);
+}
+
 // タグ名の配列から、既存タグは再利用しつつ未登録タグは自動作成して返す
 export async function getOrCreateTagsForUser(userId: string, tagNames: string[]): Promise<Tag[]> {
   const trimmed = [...new Set(tagNames.map((t) => t.trim()).filter(Boolean))];
