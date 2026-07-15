@@ -52,7 +52,19 @@ export default function DailyReportClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: today, comment, clockIn, clockOut, workItems }),
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // サーバーやプラットフォーム側の一時的な応答遅延などでJSON以外(HTMLエラーページ等)が
+        // 返ってくることがある。Gmail下書き自体は作成できている場合が多いため、
+        // 詳細はconsoleに出すだけにして、画面には穏やかなメッセージを表示する
+        console.error("日報生成APIから予期しない応答がありました:", rawText);
+        setMessage("処理を送信しました。反映まで少し時間がかかる場合があります。");
+        load();
+        return;
+      }
       if (!res.ok) throw new Error(data.error ?? "作成に失敗しました");
       setMessage("Gmail下書きを作成しました。");
       load();

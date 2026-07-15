@@ -1,24 +1,31 @@
-import { format } from "date-fns";
 import type { WorkItem } from "@/types";
 
 export const DAILY_REPORT_TO = "co_op@tcdigital.jp, nippo@tcdigital.jp";
 
-export function buildDailyReportSubject(reportDate: Date): string {
-  const mm = format(reportDate, "MM");
-  const dd = format(reportDate, "dd");
-  return `【日報】${mm}${dd}_境野巧己`;
+function parseDateISO(dateISO: string): { year: string; month: string; day: string } {
+  const match = dateISO.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) throw new Error(`不正な日付形式です: ${dateISO}`);
+  const [, year, month, day] = match;
+  return { year, month, day };
+}
+
+// dateISO(YYYY-MM-DD)の文字列から直接組み立てる。
+// Dateオブジェクト経由でformatすると、サーバーのシステムタイムゾーン(JSTでない場合)に
+// 引っ張られて日付がずれるため、文字列のまま扱う
+export function buildDailyReportSubject(dateISO: string): string {
+  const { month, day } = parseDateISO(dateISO);
+  return `【日報】${month}${day}_境野巧己`;
 }
 
 export function buildDailyReportBody(params: {
-  reportDate: Date;
+  dateISO: string;
   clockIn: string;
   clockOut: string;
   comment: string;
   workItems: WorkItem[];
 }): string {
-  const { reportDate, clockIn, clockOut, comment, workItems } = params;
-  const month = format(reportDate, "M");
-  const day = format(reportDate, "d");
+  const { dateISO, clockIn, clockOut, comment, workItems } = params;
+  const { month, day } = parseDateISO(dateISO);
   const totalHours = workItems.reduce((sum, item) => sum + item.hours, 0);
   const workLines = workItems.map((item) => `- ${item.title}`).join("\n");
 
@@ -26,7 +33,7 @@ export function buildDailyReportBody(params: {
 
 お疲れ様です。境野です。
 
-${month}月${day}日の日報を送付いたします。
+${Number(month)}月${Number(day)}日の日報を送付いたします。
 
 
 ■本日の出社/退社（予定）時間：${clockIn}/${clockOut}

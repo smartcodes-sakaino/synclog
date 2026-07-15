@@ -46,7 +46,6 @@ export async function buildDailyReportPreview(userId: string, dateISO: string): 
   const clockIn = existing?.clock_in ?? "09:00";
   const clockOut = existing?.clock_out ?? "18:00";
   const comment = existing?.comment ?? "";
-  const reportDate = new Date(`${dateISO}T00:00:00+09:00`);
 
   return {
     reportDate: dateISO,
@@ -54,8 +53,8 @@ export async function buildDailyReportPreview(userId: string, dateISO: string): 
     clockOut,
     comment,
     workItems,
-    subject: buildDailyReportSubject(reportDate),
-    body: buildDailyReportBody({ reportDate, clockIn, clockOut, comment, workItems }),
+    subject: buildDailyReportSubject(dateISO),
+    body: buildDailyReportBody({ dateISO, clockIn, clockOut, comment, workItems }),
   };
 }
 
@@ -124,8 +123,7 @@ export async function generateDailyReport(
   }
 
   if (options.respectSkipRules) {
-    const targetDate = new Date(`${dateISO}T00:00:00+09:00`);
-    const skip = await checkShouldSkipDailyReport(primaryAccount, dateISO, targetDate);
+    const skip = await checkShouldSkipDailyReport(primaryAccount, dateISO);
     if (skip.shouldSkip) {
       await upsertDailyReport({ userId, dateISO, status: "skipped", skipReason: skip.reason });
       return { status: "skipped", reason: skip.reason ?? undefined };
@@ -138,10 +136,9 @@ export async function generateDailyReport(
     const clockOut = options.clockOut ?? preview.clockOut;
     const comment = options.comment ?? preview.comment;
     const workItems = options.workItems ?? preview.workItems;
-    const reportDate = new Date(`${dateISO}T00:00:00+09:00`);
 
-    const subject = buildDailyReportSubject(reportDate);
-    const body = buildDailyReportBody({ reportDate, clockIn, clockOut, comment, workItems });
+    const subject = buildDailyReportSubject(dateISO);
+    const body = buildDailyReportBody({ dateISO, clockIn, clockOut, comment, workItems });
 
     const draftId = await createGmailDraft(primaryAccount, DAILY_REPORT_TO, subject, body);
 

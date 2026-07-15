@@ -1,4 +1,3 @@
-import { getDay } from "date-fns";
 import { isJapaneseHoliday, isOnPaidLeave } from "@/lib/google/calendar";
 import type { GoogleAccount } from "@/types";
 
@@ -12,14 +11,18 @@ export interface SkipCheckResult {
   reason: string | null;
 }
 
+// dateISO(YYYY-MM-DD、JSTの暦日)の曜日を、サーバーのシステムタイムゾーンに依存せず判定する
+function getDayOfWeek(dateISO: string): number {
+  return new Date(`${dateISO}T00:00:00Z`).getUTCDay();
+}
+
 // 平日17:30の自動生成をスキップすべきか判定する
 // (優先度: 週末 > 祝日 > 有給休暇)
 export async function checkShouldSkipDailyReport(
   primaryAccount: AccountRow,
-  dateISO: string,
-  targetDate: Date
+  dateISO: string
 ): Promise<SkipCheckResult> {
-  const dayOfWeek = getDay(targetDate);
+  const dayOfWeek = getDayOfWeek(dateISO);
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     return { shouldSkip: true, reason: "週末のため" };
   }
