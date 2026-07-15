@@ -47,6 +47,31 @@ export async function listMergedEvents(
   return results.sort((a, b) => a.start.localeCompare(b.start));
 }
 
+export interface NewCalendarEvent {
+  title: string;
+  allDay: boolean;
+  start: string; // allDay: "YYYY-MM-DD" / timed: ISO日時(タイムゾーン付き)
+  end: string;
+}
+
+// 指定アカウントのプライマリカレンダーに予定を作成する
+export async function createCalendarEvent(account: AccountRow, event: NewCalendarEvent): Promise<string> {
+  const auth = await getAuthorizedClientForAccount(account);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const res = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: {
+      summary: event.title,
+      start: event.allDay ? { date: event.start } : { dateTime: event.start },
+      end: event.allDay ? { date: event.end } : { dateTime: event.end },
+    },
+  });
+
+  if (!res.data.id) throw new Error("予定の作成に失敗しました");
+  return res.data.id;
+}
+
 // 指定日が「日本の祝日」カレンダーに終日予定として登録されているか判定する
 export async function isJapaneseHoliday(account: AccountRow, dateISO: string): Promise<boolean> {
   const auth = await getAuthorizedClientForAccount(account);

@@ -10,10 +10,10 @@ export const LOGIN_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.profile",
 ];
 
-// アカウント連携用スコープ(カレンダー/Gmail下書き/ドキュメント閲覧 + どのアカウントかを識別するためのメールアドレス取得)
+// アカウント連携用スコープ(カレンダー閲覧・作成/Gmail下書き/ドキュメント閲覧 + どのアカウントかを識別するためのメールアドレス取得)
 export const ACCOUNT_LINK_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/documents.readonly",
   "https://www.googleapis.com/auth/drive.readonly",
