@@ -60,7 +60,9 @@ export default function TagFolderCard({
         {tasks.map((task) => (
           <div
             key={task.id}
-            className={`flex items-center gap-3 p-3 rounded-xl bg-surface-container-lowest border shadow-sm hover:shadow-md transition-shadow ${PRIORITY_BORDER[task.priority]} ${task.status === "done" ? "opacity-60" : ""}`}
+            className={`flex items-center gap-3 p-3 rounded-xl border shadow-sm hover:shadow-md transition-shadow ${PRIORITY_BORDER[task.priority]} ${
+              task.status === "in_progress" ? "bg-secondary-container/20" : "bg-surface-container-lowest"
+            } ${task.status === "done" ? "opacity-60" : ""}`}
           >
             <input
               type="checkbox"
