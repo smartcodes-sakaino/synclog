@@ -1,14 +1,15 @@
 import { query, queryOne } from "@/lib/db";
-import { getPrimaryGoogleAccount } from "@/lib/googleAccounts";
+import { getPrimaryGoogleAccount, listGoogleAccountsForUser } from "@/lib/googleAccounts";
 import { summarizeDailyWork } from "@/lib/gemini";
 import { createGmailDraft } from "@/lib/google/gmail";
+import { listMergedEvents } from "@/lib/google/calendar";
 import { checkShouldSkipDailyReport } from "@/lib/dailyReportSkip";
 import {
   DAILY_REPORT_TO,
   buildDailyReportBody,
   buildDailyReportSubject,
 } from "@/lib/dailyReportTemplate";
-import type { DailyReport, WorkItem } from "@/types";
+import type { CalendarEventLine, DailyReport, WorkItem } from "@/types";
 
 async function getCompletedTaskTitlesForDate(userId: string, dateISO: string): Promise<string[]> {
   const start = `${dateISO}T00:00:00+09:00`;
@@ -21,12 +22,30 @@ async function getCompletedTaskTitlesForDate(userId: string, dateISO: string): P
   return rows.map((t) => t.title);
 }
 
+// 連携済みの全アカウントから、その日のカレンダー予定をそのまま(AI要約せず)取得する
+async function getCalendarEventLinesForDate(userId: string, dateISO: string): Promise<CalendarEventLine[]> {
+  const accounts = await listGoogleAccountsForUser(userId);
+  if (accounts.length === 0) return [];
+
+  const events = await listMergedEvents(
+    accounts,
+    `${dateISO}T00:00:00+09:00`,
+    `${dateISO}T23:59:59+09:00`
+  );
+
+  return events.map((e) => ({
+    time: e.allDay ? "終日" : e.start.slice(11, 16),
+    title: e.title,
+  }));
+}
+
 export interface DailyReportPreview {
   reportDate: string;
   clockIn: string;
   clockOut: string;
   comment: string;
   workItems: WorkItem[];
+  calendarEvents: CalendarEventLine[];
   subject: string;
   body: string;
 }
@@ -46,6 +65,7 @@ export async function buildDailyReportPreview(userId: string, dateISO: string): 
   const clockIn = existing?.clock_in ?? "09:00";
   const clockOut = existing?.clock_out ?? "18:00";
   const comment = existing?.comment ?? "";
+  const calendarEvents = await getCalendarEventLinesForDate(userId, dateISO);
 
   return {
     reportDate: dateISO,
@@ -53,8 +73,9 @@ export async function buildDailyReportPreview(userId: string, dateISO: string): 
     clockOut,
     comment,
     workItems,
+    calendarEvents,
     subject: buildDailyReportSubject(dateISO),
-    body: buildDailyReportBody({ dateISO, clockIn, clockOut, comment, workItems }),
+    body: buildDailyReportBody({ dateISO, clockIn, clockOut, comment, workItems, calendarEvents }),
   };
 }
 
@@ -138,7 +159,14 @@ export async function generateDailyReport(
     const workItems = options.workItems ?? preview.workItems;
 
     const subject = buildDailyReportSubject(dateISO);
-    const body = buildDailyReportBody({ dateISO, clockIn, clockOut, comment, workItems });
+    const body = buildDailyReportBody({
+      dateISO,
+      clockIn,
+      clockOut,
+      comment,
+      workItems,
+      calendarEvents: preview.calendarEvents,
+    });
 
     const draftId = await createGmailDraft(primaryAccount, DAILY_REPORT_TO, subject, body);
 

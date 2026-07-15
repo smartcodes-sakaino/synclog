@@ -1,4 +1,4 @@
-import type { WorkItem } from "@/types";
+import type { CalendarEventLine, WorkItem } from "@/types";
 
 export const DAILY_REPORT_TO = "co_op@tcdigital.jp, nippo@tcdigital.jp";
 
@@ -23,11 +23,16 @@ export function buildDailyReportBody(params: {
   clockOut: string;
   comment: string;
   workItems: WorkItem[];
+  calendarEvents: CalendarEventLine[];
 }): string {
-  const { dateISO, clockIn, clockOut, comment, workItems } = params;
+  const { dateISO, clockIn, clockOut, comment, workItems, calendarEvents } = params;
   const { month, day } = parseDateISO(dateISO);
   const totalHours = workItems.reduce((sum, item) => sum + item.hours, 0);
   const workLines = workItems.map((item) => `- ${item.title}`).join("\n");
+  const eventLines =
+    calendarEvents.length > 0
+      ? calendarEvents.map((e) => `- ${e.time} ${e.title}`).join("\n")
+      : "- 予定はありません";
 
   return `各位
 
@@ -40,7 +45,10 @@ ${Number(month)}月${Number(day)}日の日報を送付いたします。
 ■報告事項・コメント
 ${comment}
 
-■本日の作業内容（${totalHours.toFixed(1)}h）
+■本日の予定
+${eventLines}
+
+■本日の完了タスク（${totalHours.toFixed(1)}h）
 ${workLines}
 --
 ＊--------------------------------------------------------＊

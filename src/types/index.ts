@@ -123,6 +123,11 @@ export interface CalendarEvent {
   allDay: boolean;
 }
 
+export interface CalendarEventLine {
+  time: string;
+  title: string;
+}
+
 export interface SessionData {
   userId: string;
   email: string;

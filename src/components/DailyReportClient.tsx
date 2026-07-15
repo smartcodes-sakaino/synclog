@@ -124,7 +124,7 @@ export default function DailyReportClient() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                本日の作業内容 ({totalHours.toFixed(1)}h)
+                本日の完了タスク ({totalHours.toFixed(1)}h)
               </h3>
               <span className="bg-primary-container text-on-primary-container font-label-sm text-label-sm px-3 py-1 rounded-full">AI自動生成</span>
             </div>

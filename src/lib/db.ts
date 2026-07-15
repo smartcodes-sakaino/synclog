@@ -1,4 +1,9 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// dateカラム(due_date, report_date等)は既定でJavaScriptのDateオブジェクトに変換され、
+// JSON化する際に "2026-07-20T00:00:00.000Z" のようなタイムスタンプ形式になってしまう。
+// 時刻を持たない純粋な日付として、Postgresが返す "YYYY-MM-DD" の文字列のまま扱う
+types.setTypeParser(types.builtins.DATE, (value) => value);
 
 let pool: Pool | null = null;
 
