@@ -6,11 +6,13 @@ import {
   addMonths,
   addWeeks,
   eachDayOfInterval,
+  endOfDay,
   endOfMonth,
   endOfWeek,
   format,
   isSameDay,
   isSameMonth,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   subDays,
@@ -46,7 +48,7 @@ export default function CalendarClient() {
     if (viewMode === "week") {
       return { rangeStart: startOfWeek(currentDate), rangeEnd: endOfWeek(currentDate) };
     }
-    return { rangeStart: currentDate, rangeEnd: currentDate };
+    return { rangeStart: startOfDay(currentDate), rangeEnd: endOfDay(currentDate) };
   }, [viewMode, currentDate]);
 
   const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
