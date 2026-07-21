@@ -4,6 +4,7 @@ import { createOAuthClient, getLinkRedirectUri } from "@/lib/google/oauth";
 import { encryptToken } from "@/lib/crypto";
 import { getCurrentUserId } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { absoluteUrl } from "@/lib/url";
 
 const ACCOUNT_COLOR_CYCLE = ["primary", "secondary", "tertiary"];
 
@@ -16,7 +17,7 @@ interface OAuthTokens {
 
 export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId();
-  if (!userId) return NextResponse.redirect(new URL("/login", request.url));
+  if (!userId) return NextResponse.redirect(absoluteUrl("/login"));
 
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
   const expectedState = request.cookies.get("oauth_link_state")?.value;
 
   if (!code || !state || !expectedState || state !== `link:${expectedState}`) {
-    return NextResponse.redirect(new URL("/settings?error=invalid_state", request.url));
+    return NextResponse.redirect(absoluteUrl("/settings?error=invalid_state"));
   }
 
   const redirectUri = getLinkRedirectUri();
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("Google token exchange failed:", message);
     return NextResponse.redirect(
-      new URL(`/settings?error=token_exchange_failed&detail=${encodeURIComponent(message)}`, request.url)
+      absoluteUrl(`/settings?error=token_exchange_failed&detail=${encodeURIComponent(message)}`)
     );
   }
   client.setCredentials(tokens);
@@ -51,12 +52,12 @@ export async function GET(request: NextRequest) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("Google userinfo fetch failed:", message);
     return NextResponse.redirect(
-      new URL(`/settings?error=userinfo_failed&detail=${encodeURIComponent(message)}`, request.url)
+      absoluteUrl(`/settings?error=userinfo_failed&detail=${encodeURIComponent(message)}`)
     );
   }
 
   if (!profileEmail || !tokens.refresh_token) {
-    return NextResponse.redirect(new URL("/settings?error=no_refresh_token", request.url));
+    return NextResponse.redirect(absoluteUrl("/settings?error=no_refresh_token"));
   }
 
   const [{ count }] = await query<{ count: number }>(
@@ -90,10 +91,10 @@ export async function GET(request: NextRequest) {
     );
   } catch (err) {
     console.error("Failed to save google_accounts row:", err);
-    return NextResponse.redirect(new URL("/settings?error=save_failed", request.url));
+    return NextResponse.redirect(absoluteUrl("/settings?error=save_failed"));
   }
 
-  const res = NextResponse.redirect(new URL("/settings", request.url));
+  const res = NextResponse.redirect(absoluteUrl("/settings"));
   res.cookies.delete("oauth_link_state");
   return res;
 }

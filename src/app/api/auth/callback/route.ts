@@ -3,6 +3,7 @@ import { google } from "googleapis";
 import { createOAuthClient, getLoginRedirectUri } from "@/lib/google/oauth";
 import { ALLOWED_LOGIN_EMAIL, findOrCreateUserByEmail } from "@/lib/auth";
 import { getSession } from "@/lib/session";
+import { absoluteUrl } from "@/lib/url";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
   const expectedState = request.cookies.get("oauth_login_state")?.value;
 
   if (!code || !state || !expectedState || state !== `login:${expectedState}`) {
-    return NextResponse.redirect(new URL("/login?error=invalid_state", request.url));
+    return NextResponse.redirect(absoluteUrl("/login?error=invalid_state"));
   }
 
   const redirectUri = getLoginRedirectUri();
@@ -27,12 +28,12 @@ export async function GET(request: NextRequest) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("Google login token exchange failed:", message);
     return NextResponse.redirect(
-      new URL(`/login?error=token_exchange_failed&detail=${encodeURIComponent(message)}`, request.url)
+      absoluteUrl(`/login?error=token_exchange_failed&detail=${encodeURIComponent(message)}`)
     );
   }
 
   if (!profileEmail || profileEmail !== ALLOWED_LOGIN_EMAIL) {
-    return NextResponse.redirect(new URL("/login?error=not_allowed", request.url));
+    return NextResponse.redirect(absoluteUrl("/login?error=not_allowed"));
   }
 
   const user = await findOrCreateUserByEmail(profileEmail);
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   session.loggedInAt = Date.now();
   await session.save();
 
-  const res = NextResponse.redirect(new URL("/", request.url));
+  const res = NextResponse.redirect(absoluteUrl("/"));
   res.cookies.delete("oauth_login_state");
   return res;
 }

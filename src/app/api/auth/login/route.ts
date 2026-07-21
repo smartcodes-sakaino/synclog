@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { buildAuthUrl, getLoginRedirectUri, LOGIN_SCOPES } from "@/lib/google/oauth";
+import { absoluteUrl } from "@/lib/url";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const state = randomBytes(16).toString("hex");
     const url = buildAuthUrl(LOGIN_SCOPES, `login:${state}`, getLoginRedirectUri());
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     return NextResponse.redirect(
-      new URL(`/login?error=config_error&detail=${encodeURIComponent(message)}`, request.url)
+      absoluteUrl(`/login?error=config_error&detail=${encodeURIComponent(message)}`)
     );
   }
 }

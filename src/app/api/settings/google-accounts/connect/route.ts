@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { buildAuthUrl, getLinkRedirectUri, ACCOUNT_LINK_SCOPES } from "@/lib/google/oauth";
 import { getCurrentUserId } from "@/lib/auth";
+import { absoluteUrl } from "@/lib/url";
 
-export async function GET(request: Request) {
+export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(absoluteUrl("/login"));
   }
 
   try {
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     return NextResponse.redirect(
-      new URL(`/settings?error=config_error&detail=${encodeURIComponent(message)}`, request.url)
+      absoluteUrl(`/settings?error=config_error&detail=${encodeURIComponent(message)}`)
     );
   }
 }
