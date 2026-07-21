@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/settings?error=invalid_state", request.url));
   }
 
-  const client = createOAuthClient(getLinkRedirectUri());
+  const redirectUri = getLinkRedirectUri();
+  const client = createOAuthClient(redirectUri);
   let tokens: OAuthTokens;
   try {
-    const result = await client.getToken(code);
+    const result = await client.getToken({ code, redirect_uri: redirectUri });
     tokens = result.tokens;
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";

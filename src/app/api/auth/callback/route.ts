@@ -14,10 +14,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=invalid_state", request.url));
   }
 
-  const client = createOAuthClient(getLoginRedirectUri());
+  const redirectUri = getLoginRedirectUri();
+  const client = createOAuthClient(redirectUri);
   let profileEmail: string | null | undefined;
   try {
-    const { tokens } = await client.getToken(code);
+    const { tokens } = await client.getToken({ code, redirect_uri: redirectUri });
     client.setCredentials(tokens);
     const oauth2 = google.oauth2({ version: "v2", auth: client });
     const { data: profile } = await oauth2.userinfo.get();

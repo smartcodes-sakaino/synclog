@@ -57,6 +57,7 @@ export function buildAuthUrl(scopes: string[], state: string, redirectUri: strin
     prompt: "consent",
     scope: scopes,
     state,
+    redirect_uri: redirectUri,
   });
 }
 
