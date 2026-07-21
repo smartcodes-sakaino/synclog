@@ -20,11 +20,14 @@ export const ACCOUNT_LINK_SCOPES = [
 ];
 
 export function createOAuthClient(redirectUri?: string) {
-  return new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri
-  );
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET が設定されていません(Replit Deployments の Secrets を確認してください)"
+    );
+  }
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
 // APP_BASE_URLの設定漏れ(localhostへの誤リダイレクト等)を早期に検知するためのチェック
