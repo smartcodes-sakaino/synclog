@@ -2,6 +2,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_state: "ログイン処理に失敗しました。もう一度お試しください。",
   not_allowed: "このアプリはご本人専用です。許可されたGoogleアカウントでログインしてください。",
   token_exchange_failed: "Googleとの認証に失敗しました。",
+  config_error: "サーバー側の設定に問題があります。",
 };
 
 export default async function LoginPage({

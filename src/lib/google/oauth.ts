@@ -27,13 +27,27 @@ export function createOAuthClient(redirectUri?: string) {
   );
 }
 
+// APP_BASE_URLの設定漏れ(localhostへの誤リダイレクト等)を早期に検知するためのチェック
+function getAppBaseUrl(): string {
+  const url = process.env.APP_BASE_URL;
+  if (!url) {
+    throw new Error("APP_BASE_URL が設定されていません(Replit Deployments の Secrets を確認してください)");
+  }
+  if (url.includes("localhost") && process.env.NODE_ENV === "production") {
+    throw new Error(
+      `APP_BASE_URL が本番URLになっていません(現在の値: ${url})。Replit DeploymentsのSecretsを公開後のURLに更新してください`
+    );
+  }
+  return url;
+}
+
 // ログイン用とアカウント連携用でコールバック先のパスが異なるため、それぞれ別のリダイレクトURIを使う
 export function getLoginRedirectUri(): string {
-  return `${process.env.APP_BASE_URL}/api/auth/callback`;
+  return `${getAppBaseUrl()}/api/auth/callback`;
 }
 
 export function getLinkRedirectUri(): string {
-  return `${process.env.APP_BASE_URL}/api/settings/google-accounts/callback`;
+  return `${getAppBaseUrl()}/api/settings/google-accounts/callback`;
 }
 
 export function buildAuthUrl(scopes: string[], state: string, redirectUri: string) {

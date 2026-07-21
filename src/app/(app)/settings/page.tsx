@@ -7,6 +7,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   userinfo_failed: "Googleアカウント情報の取得に失敗しました。",
   no_refresh_token: "Googleから継続利用に必要な権限を取得できませんでした。一度連携を解除し、再度同意画面で許可してください。",
   save_failed: "連携情報の保存に失敗しました。",
+  config_error: "サーバー側の設定に問題があります。",
 };
 
 export default async function SettingsPage({

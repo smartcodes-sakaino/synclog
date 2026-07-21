@@ -24,7 +24,9 @@ import type { CalendarEvent } from "@/types";
 
 type ViewMode = "month" | "week" | "day";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+// 仕事用の画面のため、0時からではなく8時から表示する
+const DAY_VIEW_START_HOUR = 8;
+const HOURS = Array.from({ length: 24 - DAY_VIEW_START_HOUR }, (_, i) => i + DAY_VIEW_START_HOUR);
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 const ACCOUNT_DOT: Record<string, string> = {

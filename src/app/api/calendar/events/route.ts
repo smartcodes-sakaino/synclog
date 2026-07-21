@@ -59,12 +59,23 @@ export async function POST(request: NextRequest) {
   );
 
   const failed = results
-    .map((r, i) => (r.status === "rejected" ? targetAccounts[i].google_email : null))
-    .filter((email): email is string => Boolean(email));
+    .map((r, i) =>
+      r.status === "rejected"
+        ? { email: targetAccounts[i].google_email, reason: r.reason instanceof Error ? r.reason.message : String(r.reason) }
+        : null
+    )
+    .filter((f): f is { email: string; reason: string } => f !== null);
 
-  if (failed.length === targetAccounts.length) {
-    return NextResponse.json({ error: "予定の作成にすべて失敗しました" }, { status: 500 });
+  if (failed.length > 0) {
+    console.error("カレンダー予定の作成に失敗したアカウントがあります:", failed);
   }
 
-  return NextResponse.json({ ok: true, failed }, { status: 201 });
+  if (failed.length === targetAccounts.length) {
+    return NextResponse.json(
+      { error: "予定の作成にすべて失敗しました", detail: failed.map((f) => `${f.email}: ${f.reason}`).join(" / ") },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, failed: failed.map((f) => f.email) }, { status: 201 });
 }

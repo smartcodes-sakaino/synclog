@@ -45,7 +45,9 @@ export default function CreateEventModal({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "予定の作成に失敗しました");
+      if (!res.ok) {
+        throw new Error(data.detail ? `${data.error}(${data.detail})` : data.error ?? "予定の作成に失敗しました");
+      }
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "予定の作成に失敗しました");
