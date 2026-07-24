@@ -19,10 +19,14 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-import CreateEventModal from "@/components/CreateEventModal";
+import EventModal from "@/components/EventModal";
 import type { CalendarEvent } from "@/types";
 
 type ViewMode = "month" | "week" | "day";
+type ModalState =
+  | { mode: "create"; date: Date; startTime?: string; endTime?: string }
+  | { mode: "edit"; event: CalendarEvent }
+  | null;
 
 // 仕事用の画面のため、0時からではなく8時から表示する
 const DAY_VIEW_START_HOUR = 8;
@@ -41,7 +45,7 @@ export default function CalendarClient() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; email: string; colorKey: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [modal, setModal] = useState<ModalState>(null);
 
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (viewMode === "month") {
@@ -97,6 +101,15 @@ export default function CalendarClient() {
     else setCurrentDate((d) => addDays(d, 1));
   }
 
+  function closeModal() {
+    setModal(null);
+  }
+
+  function afterSave() {
+    setModal(null);
+    loadEvents();
+  }
+
   const headerLabel =
     viewMode === "month"
       ? format(currentDate, "yyyy年 M月")
@@ -112,7 +125,10 @@ export default function CalendarClient() {
           <p className="text-on-surface-variant mt-1">2つのGoogleアカウントの予定を1つのビューで管理。</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowCreateModal(true)} className="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-bold flex items-center gap-2">
+          <button
+            onClick={() => setModal({ mode: "create", date: currentDate })}
+            className="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-bold flex items-center gap-2"
+          >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>予定を作成
           </button>
           <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors text-sm flex items-center gap-2 border border-outline-variant/30">
@@ -185,7 +201,11 @@ export default function CalendarClient() {
                 const isToday = isSameDay(day, today);
                 const inMonth = isSameMonth(day, currentDate);
                 return (
-                  <div key={key} className={`bg-surface min-h-[110px] p-2 relative ${!inMonth ? "opacity-40" : ""}`}>
+                  <div
+                    key={key}
+                    onClick={() => setModal({ mode: "create", date: day })}
+                    className={`bg-surface min-h-[110px] p-2 relative cursor-pointer hover:bg-surface-container-lowest transition-colors ${!inMonth ? "opacity-40" : ""}`}
+                  >
                     {isToday ? (
                       <div className="absolute top-2 left-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center font-label-sm text-label-sm text-on-primary shadow-md z-10">
                         {format(day, "d")}
@@ -195,7 +215,14 @@ export default function CalendarClient() {
                     )}
                     <div className={isToday ? "mt-6" : ""}>
                       {dayEvents.slice(0, 3).map((event) => (
-                        <div key={event.id} className={`text-[11px] font-bold px-2 py-1 rounded truncate mb-1 border-l-2 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
+                        <div
+                          key={event.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setModal({ mode: "edit", event });
+                          }}
+                          className={`text-[11px] font-bold px-2 py-1 rounded truncate mb-1 border-l-2 hover:opacity-80 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}
+                        >
                           {event.allDay ? "終日" : format(new Date(event.start), "HH:mm")} {event.title}
                         </div>
                       ))}
@@ -214,13 +241,24 @@ export default function CalendarClient() {
               const dayEvents = eventsByDay.get(key) ?? [];
               const isToday = isSameDay(day, today);
               return (
-                <div key={key} className="bg-surface min-h-[400px] p-2 flex flex-col gap-1">
+                <div
+                  key={key}
+                  onClick={() => setModal({ mode: "create", date: day })}
+                  className="bg-surface min-h-[400px] p-2 flex flex-col gap-1 cursor-pointer hover:bg-surface-container-lowest transition-colors"
+                >
                   <div className={`text-center pb-2 mb-1 border-b border-outline-variant/10 ${isToday ? "text-primary font-bold" : "text-on-surface-variant"}`}>
                     <p className="font-label-sm text-label-sm">{WEEKDAYS[day.getDay()]}</p>
                     <p className="text-body-lg text-body-lg">{format(day, "d")}</p>
                   </div>
                   {dayEvents.map((event) => (
-                    <div key={event.id} className={`text-xs font-bold px-2 py-1.5 rounded border-l-2 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
+                    <div
+                      key={event.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setModal({ mode: "edit", event });
+                      }}
+                      className={`text-xs font-bold px-2 py-1.5 rounded border-l-2 hover:opacity-80 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}
+                    >
                       <p>{event.allDay ? "終日" : format(new Date(event.start), "HH:mm")}</p>
                       <p className="truncate font-normal">{event.title}</p>
                     </div>
@@ -247,50 +285,70 @@ export default function CalendarClient() {
               {allDayEvents.length > 0 && (
                 <div className="p-4 border-b border-outline-variant/20 flex flex-wrap gap-2 bg-surface-container-lowest">
                   {allDayEvents.map((event) => (
-                    <span key={event.id} className={`text-xs font-bold px-3 py-1.5 rounded-full border-l-2 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
+                    <button
+                      key={event.id}
+                      onClick={() => setModal({ mode: "edit", event })}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full border-l-2 hover:opacity-80 ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}
+                    >
                       終日・{event.title}
-                    </span>
+                    </button>
                   ))}
                 </div>
               )}
               {loading && <p className="text-on-surface-variant text-sm p-6">読み込み中...</p>}
-              {!loading && dayEvents.length === 0 && (
-                <p className="text-on-surface-variant text-sm p-6">この日の予定はありません</p>
-              )}
-              {!loading && timedEvents.length > 0 && (
-                <div className="h-[600px] overflow-y-auto">
-                  {HOURS.map((hour) => (
-                    <div key={hour} className="flex border-b border-outline-variant/10 min-h-[56px]">
-                      <div className="w-16 flex-shrink-0 py-2 px-2 text-right font-label-sm text-label-sm text-on-surface-variant border-r border-outline-variant/10">
-                        {String(hour).padStart(2, "0")}:00
-                      </div>
-                      <div className="flex-1 p-2 flex flex-col gap-1.5">
-                        {(eventsByHour.get(hour) ?? []).map((event) => (
-                          <div key={event.id} className={`text-sm px-3 py-1.5 rounded-lg border-l-2 bg-surface-container-lowest card-shadow ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}>
-                            <span className="font-bold">{format(new Date(event.start), "HH:mm")}</span> {event.title}
-                            <span className="ml-2 text-xs text-on-surface-variant">{event.accountEmail}</span>
-                          </div>
-                        ))}
-                      </div>
+              <div className="h-[600px] overflow-y-auto">
+                {HOURS.map((hour) => (
+                  <div
+                    key={hour}
+                    onClick={() =>
+                      setModal({
+                        mode: "create",
+                        date: currentDate,
+                        startTime: `${String(hour).padStart(2, "0")}:00`,
+                        endTime: `${String(hour + 1).padStart(2, "0")}:00`,
+                      })
+                    }
+                    className="flex border-b border-outline-variant/10 min-h-[56px] cursor-pointer hover:bg-surface-container-low/50 transition-colors"
+                  >
+                    <div className="w-16 flex-shrink-0 py-2 px-2 text-right font-label-sm text-label-sm text-on-surface-variant border-r border-outline-variant/10">
+                      {String(hour).padStart(2, "0")}:00
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="flex-1 p-2 flex flex-col gap-1.5">
+                      {(eventsByHour.get(hour) ?? []).map((event) => (
+                        <div
+                          key={event.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setModal({ mode: "edit", event });
+                          }}
+                          className={`text-sm px-3 py-1.5 rounded-lg border-l-2 bg-surface-container-lowest card-shadow hover:shadow-md transition-shadow ${ACCOUNT_DOT[event.accountColorKey] ?? ACCOUNT_DOT.primary}`}
+                        >
+                          <span className="font-bold">{format(new Date(event.start), "HH:mm")}</span> {event.title}
+                          <span className="ml-2 text-xs text-on-surface-variant">{event.accountEmail}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })()}
       </div>
 
-      {showCreateModal && (
-        <CreateEventModal
-          defaultDate={currentDate}
+      {modal?.mode === "create" && (
+        <EventModal
+          mode="create"
+          defaultDate={modal.date}
+          defaultStartTime={modal.startTime}
+          defaultEndTime={modal.endTime}
           accounts={accounts}
-          onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
-            setShowCreateModal(false);
-            loadEvents();
-          }}
+          onClose={closeModal}
+          onSaved={afterSave}
         />
+      )}
+      {modal?.mode === "edit" && (
+        <EventModal mode="edit" existingEvent={modal.event} onClose={closeModal} onSaved={afterSave} onDeleted={afterSave} />
       )}
     </main>
   );

@@ -72,6 +72,33 @@ export async function createCalendarEvent(account: AccountRow, event: NewCalenda
   return res.data.id;
 }
 
+// 指定アカウントの既存の予定を更新する
+export async function updateCalendarEvent(
+  account: AccountRow,
+  googleEventId: string,
+  event: NewCalendarEvent
+): Promise<void> {
+  const auth = await getAuthorizedClientForAccount(account);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  await calendar.events.patch({
+    calendarId: "primary",
+    eventId: googleEventId,
+    requestBody: {
+      summary: event.title,
+      start: event.allDay ? { date: event.start } : { dateTime: event.start },
+      end: event.allDay ? { date: event.end } : { dateTime: event.end },
+    },
+  });
+}
+
+// 指定アカウントの既存の予定を削除する
+export async function deleteCalendarEvent(account: AccountRow, googleEventId: string): Promise<void> {
+  const auth = await getAuthorizedClientForAccount(account);
+  const calendar = google.calendar({ version: "v3", auth });
+  await calendar.events.delete({ calendarId: "primary", eventId: googleEventId });
+}
+
 // 指定日が「日本の祝日」カレンダーに終日予定として登録されているか判定する
 export async function isJapaneseHoliday(account: AccountRow, dateISO: string): Promise<boolean> {
   const auth = await getAuthorizedClientForAccount(account);
