@@ -8,9 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
-    "lint": "eslint .",
-    "cron:daily-report": "node scripts/run-daily-report-cron.mjs"
+    "start": "next start",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@google/genai": "2.11.0",
