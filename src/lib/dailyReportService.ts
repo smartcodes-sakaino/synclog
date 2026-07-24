@@ -78,7 +78,7 @@ export async function buildDailyReportPreview(userId: string, dateISO: string): 
     workItems,
     calendarEvents,
     subject: buildDailyReportSubject(dateISO),
-    body: buildDailyReportBody({ dateISO, clockIn, clockOut, comment, workItems, calendarEvents }),
+    body: buildDailyReportBody({ dateISO, comment, workItems, calendarEvents }),
   };
 }
 
@@ -164,8 +164,6 @@ export async function generateDailyReport(
     const subject = buildDailyReportSubject(dateISO);
     const body = buildDailyReportBody({
       dateISO,
-      clockIn,
-      clockOut,
       comment,
       workItems,
       calendarEvents: preview.calendarEvents,

@@ -44,8 +44,8 @@ export default function RoutinesClient({ initialRoutines }: { initialRoutines: R
     <div className="p-container-padding">
       <div className="glass-panel rounded-[24px] p-6 mb-6">
         <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2 mb-2">
-          <span className="material-symbols-outlined text-primary-container">repeat</span>
-          定例業務
+          <span className="material-symbols-outlined text-primary-container">dashboard</span>
+          Dashboard
         </h3>
         <p className="font-body-md text-body-md text-on-surface-variant mb-4">
           期限のない継続的な担当業務を管理します

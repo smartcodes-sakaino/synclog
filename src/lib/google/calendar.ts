@@ -40,6 +40,8 @@ export async function listMergedEvents(
         start,
         end,
         allDay: !event.start?.dateTime,
+        description: event.description ?? null,
+        meetUrl: event.hangoutLink ?? null,
       });
     }
   }

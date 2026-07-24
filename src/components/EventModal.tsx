@@ -164,9 +164,30 @@ export default function EventModal(props: EventModalProps) {
           )}
 
           {isEdit ? (
-            <p className="text-sm text-on-surface-variant">
-              連携先アカウント: <span className="font-bold">{props.existingEvent.accountEmail}</span>
-            </p>
+            <>
+              <p className="text-sm text-on-surface-variant">
+                連携先アカウント: <span className="font-bold">{props.existingEvent.accountEmail}</span>
+              </p>
+              {props.existingEvent.meetUrl && (
+                <a
+                  href={props.existingEvent.meetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[16px]">videocam</span>
+                  Google Meetに参加
+                </a>
+              )}
+              {props.existingEvent.description && (
+                <div>
+                  <label className="block text-label-sm text-on-surface-variant mb-1">メモ</label>
+                  <p className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">
+                    {props.existingEvent.description}
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div>
               <label className="block text-label-sm text-on-surface-variant mb-2">反映先アカウント</label>

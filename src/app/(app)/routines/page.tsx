@@ -9,7 +9,7 @@ export default async function RoutinesPage() {
 
   return (
     <>
-      <Header title="定例業務" />
+      <Header title="Dashboard" />
       <RoutinesClient initialRoutines={initialRoutines} />
     </>
   );

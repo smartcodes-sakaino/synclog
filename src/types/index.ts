@@ -134,6 +134,8 @@ export interface CalendarEvent {
   start: string;
   end: string;
   allDay: boolean;
+  description: string | null;
+  meetUrl: string | null;
 }
 
 export interface CalendarEventLine {

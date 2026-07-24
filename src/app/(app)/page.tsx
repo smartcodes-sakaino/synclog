@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Header title="タスク" />
+      <Header title="Task" />
       <DashboardClient initialTasks={initialTasks} initialTags={initialTags} />
     </>
   );

@@ -19,13 +19,11 @@ export function buildDailyReportSubject(dateISO: string): string {
 
 export function buildDailyReportBody(params: {
   dateISO: string;
-  clockIn: string;
-  clockOut: string;
   comment: string;
   workItems: WorkItem[];
   calendarEvents: CalendarEventLine[];
 }): string {
-  const { dateISO, clockIn, clockOut, comment, workItems, calendarEvents } = params;
+  const { dateISO, comment, workItems, calendarEvents } = params;
   const { month, day } = parseDateISO(dateISO);
   const workLines = workItems.map((item) => `- ${item.title}`).join("\n");
   const eventLines =
@@ -40,7 +38,6 @@ export function buildDailyReportBody(params: {
 ${Number(month)}月${Number(day)}日の日報を送付いたします。
 
 
-■本日の出社/退社（予定）時間：${clockIn}/${clockOut}
 ■報告事項・コメント
 ${comment}
 
