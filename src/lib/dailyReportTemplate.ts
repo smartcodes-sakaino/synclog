@@ -27,7 +27,6 @@ export function buildDailyReportBody(params: {
 }): string {
   const { dateISO, clockIn, clockOut, comment, workItems, calendarEvents } = params;
   const { month, day } = parseDateISO(dateISO);
-  const totalHours = workItems.reduce((sum, item) => sum + item.hours, 0);
   const workLines = workItems.map((item) => `- ${item.title}`).join("\n");
   const eventLines =
     calendarEvents.length > 0
@@ -48,7 +47,7 @@ ${comment}
 ■本日の予定
 ${eventLines}
 
-■本日の完了タスク（${totalHours.toFixed(1)}h）
+■本日の完了タスク
 ${workLines}
 --
 ＊--------------------------------------------------------＊
