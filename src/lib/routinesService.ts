@@ -11,7 +11,7 @@ export async function getRoutinesForUser(userId: string, status?: string): Promi
   }
 
   return query<Routine>(
-    `select * from routines where user_id = $1 ${statusClause} order by created_at desc`,
+    `select * from routines where user_id = $1 ${statusClause} order by created_at asc`,
     params
   );
 }
