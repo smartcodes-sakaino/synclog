@@ -115,15 +115,20 @@ export interface ExtractedTask {
   created_at: string;
 }
 
+export interface RoutineLink {
+  title: string;
+  url: string;
+}
+
 export interface Routine {
   id: string;
   user_id: string;
   title: string;
   memo: string | null;
   status: RoutineStatus;
+  links: RoutineLink[];
   created_at: string;
   updated_at: string;
-  tags: Tag[];
 }
 
 export interface CalendarEvent {

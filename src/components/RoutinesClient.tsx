@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import TagPicker from "@/components/TagPicker";
 import RoutineDetailModal from "@/components/RoutineDetailModal";
 import type { Routine } from "@/types";
 
@@ -16,7 +15,6 @@ type StatusFilter = "active" | "archived" | "all";
 export default function RoutinesClient({ initialRoutines }: { initialRoutines: Routine[] }) {
   const [routines, setRoutines] = useState<Routine[]>(initialRoutines);
   const [newTitle, setNewTitle] = useState("");
-  const [newTags, setNewTags] = useState<string[]>([]);
   const [selected, setSelected] = useState<Routine | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
 
@@ -31,10 +29,9 @@ export default function RoutinesClient({ initialRoutines }: { initialRoutines: R
     await fetch("/api/routines", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, tags: newTags }),
+      body: JSON.stringify({ title: newTitle }),
     });
     setNewTitle("");
-    setNewTags([]);
     load();
   }
 
@@ -48,19 +45,16 @@ export default function RoutinesClient({ initialRoutines }: { initialRoutines: R
           Dashboard
         </h3>
         <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-          期限のない継続的な担当業務を管理します
+          よく使うツールやドキュメントへのリンクをワークフローごとにまとめて管理します
         </p>
 
         <div className="flex flex-col md:flex-row gap-2 mb-4">
           <input
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="例: 週次定例MTGの議事録作成"
+            placeholder="例: 経費精算"
             className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary transition-colors"
           />
-          <div className="flex-1">
-            <TagPicker value={newTags} onChange={setNewTags} />
-          </div>
           <button
             onClick={addRoutine}
             className="bg-primary text-on-primary rounded-lg px-4 py-2 text-sm font-bold whitespace-nowrap"
@@ -89,30 +83,41 @@ export default function RoutinesClient({ initialRoutines }: { initialRoutines: R
           <p className="text-label-sm text-on-surface-variant col-span-full">今のところありません</p>
         )}
         {visibleRoutines.map((routine, i) => (
-          <button
+          <div
             key={routine.id}
-            onClick={() => setSelected(routine)}
-            className={`text-left rounded-xl p-5 border shadow-sm hover:shadow-md transition-shadow ${CARD_STYLES[i % CARD_STYLES.length]}`}
+            className={`rounded-xl p-5 border shadow-sm hover:shadow-md transition-shadow ${CARD_STYLES[i % CARD_STYLES.length]}`}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 cursor-pointer" onClick={() => setSelected(routine)}>
               <h4 className="font-body-lg text-body-lg">{routine.title}</h4>
               {routine.status === "archived" && (
                 <span className="text-xs bg-surface/60 rounded-full px-2 py-0.5">アーカイブ</span>
               )}
             </div>
-            <div className="bg-surface/60 rounded-lg p-3 mb-2 min-h-[50px]">
-              <p className="text-sm text-on-surface-variant/80 italic">{routine.memo || "メモ: まだありません"}</p>
+            <div
+              className="bg-surface/60 rounded-lg p-3 mb-3 min-h-[50px] cursor-pointer"
+              onClick={() => setSelected(routine)}
+            >
+              <p className="text-sm text-on-surface-variant/80 italic">{routine.memo || "概要: まだありません"}</p>
             </div>
-            {routine.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {routine.tags.map((tag) => (
-                  <span key={tag.id} className="text-xs bg-surface/60 rounded-full px-2 py-0.5">
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </button>
+            <div className="flex flex-col gap-1.5">
+              {routine.links.length === 0 && (
+                <p className="text-xs text-on-surface-variant/60">リンクはまだ登録されていません</p>
+              )}
+              {routine.links.map((link, li) => (
+                <a
+                  key={li}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 text-sm bg-surface/60 rounded-lg px-3 py-1.5 hover:bg-surface transition-colors truncate"
+                >
+                  <span className="material-symbols-outlined text-[16px] flex-shrink-0">open_in_new</span>
+                  <span className="truncate">{link.title}</span>
+                </a>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 

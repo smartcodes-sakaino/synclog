@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import TagPicker from "@/components/TagPicker";
-import type { Routine, RoutineStatus } from "@/types";
+import type { Routine, RoutineLink, RoutineStatus } from "@/types";
 
 export default function RoutineDetailModal({
   routine,
@@ -18,17 +17,32 @@ export default function RoutineDetailModal({
   const [title, setTitle] = useState(routine.title);
   const [memo, setMemo] = useState(routine.memo ?? "");
   const [status, setStatus] = useState<RoutineStatus>(routine.status);
-  const [tags, setTags] = useState(routine.tags.map((t) => t.name));
+  const [links, setLinks] = useState<RoutineLink[]>(routine.links.length > 0 ? routine.links : [{ title: "", url: "" }]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  function updateLink(index: number, field: keyof RoutineLink, value: string) {
+    setLinks((prev) => prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)));
+  }
+
+  function addLink() {
+    setLinks((prev) => [...prev, { title: "", url: "" }]);
+  }
+
+  function removeLink(index: number) {
+    setLinks((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
+      const cleanLinks = links
+        .filter((l) => l.url.trim() !== "")
+        .map((l) => ({ title: l.title.trim() || l.url.trim(), url: l.url.trim() }));
       await fetch(`/api/routines/${routine.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, memo: memo || null, status, tags }),
+        body: JSON.stringify({ title, memo: memo || null, status, links: cleanLinks }),
       });
       onSaved();
     } finally {
@@ -37,7 +51,7 @@ export default function RoutineDetailModal({
   }
 
   async function handleDelete() {
-    if (!confirm("この定例業務を削除しますか？")) return;
+    if (!confirm("このDashboardカードを削除しますか？")) return;
     setDeleting(true);
     try {
       await fetch(`/api/routines/${routine.id}`, { method: "DELETE" });
@@ -51,7 +65,7 @@ export default function RoutineDetailModal({
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg card-shadow max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-headline-md text-headline-md text-on-surface">定例業務の詳細</h3>
+          <h3 className="font-headline-md text-headline-md text-on-surface">Dashboardカードの詳細</h3>
           <button onClick={onClose} className="text-on-surface-variant hover:text-primary">
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -67,11 +81,11 @@ export default function RoutineDetailModal({
             />
           </div>
           <div>
-            <label className="block text-label-sm text-on-surface-variant mb-1">メモ</label>
+            <label className="block text-label-sm text-on-surface-variant mb-1">概要</label>
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              rows={4}
+              rows={3}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 resize-none"
             />
           </div>
@@ -90,8 +104,34 @@ export default function RoutineDetailModal({
             </button>
           </div>
           <div>
-            <label className="block text-label-sm text-on-surface-variant mb-2">タグ</label>
-            <TagPicker value={tags} onChange={setTags} />
+            <label className="block text-label-sm text-on-surface-variant mb-2">リンク</label>
+            <div className="flex flex-col gap-2">
+              {links.map((link, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={link.title}
+                    onChange={(e) => updateLink(i, "title", e.target.value)}
+                    placeholder="リンクタイトル"
+                    className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <input
+                    value={link.url}
+                    onChange={(e) => updateLink(i, "url", e.target.value)}
+                    placeholder="https://..."
+                    className="flex-[2] bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    onClick={() => removeLink(i)}
+                    className="text-on-surface-variant hover:text-error flex-shrink-0"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button onClick={addLink} className="mt-2 text-sm text-primary font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">add</span>リンクを追加
+            </button>
           </div>
         </div>
 
