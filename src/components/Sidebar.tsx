@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
+  { href: "/", label: "タスク", icon: "dashboard" },
+  { href: "/routines", label: "定例業務", icon: "repeat" },
   { href: "/calendar", label: "Calendar", icon: "calendar_today" },
   { href: "/daily-report", label: "Daily Report", icon: "summarize" },
   { href: "/review", label: "Review", icon: "analytics" },

@@ -114,6 +114,24 @@ create table if not exists extracted_tasks (
   created_at timestamptz not null default now()
 );
 
+-- 定例業務(継続的な担当業務、期限なし)
+create table if not exists routines (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  title text not null,
+  memo text,
+  status text not null default 'active' check (status in ('active', 'archived')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_routines_user_status on routines(user_id, status);
+
+create table if not exists routine_tags (
+  routine_id uuid not null references routines(id) on delete cascade,
+  tag_id uuid not null references tags(id) on delete cascade,
+  primary key (routine_id, tag_id)
+);
+
 -- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
 -- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
 -- 将来的に閲覧専用ロール等を追加する場合に備え、防御的にRow Level Securityを有効化しておく
@@ -128,3 +146,5 @@ alter table daily_reports enable row level security;
 alter table review_summaries enable row level security;
 alter table minute_sources enable row level security;
 alter table extracted_tasks enable row level security;
+alter table routines enable row level security;
+alter table routine_tags enable row level security;

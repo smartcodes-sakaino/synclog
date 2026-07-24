@@ -5,6 +5,7 @@ export type FuzzyTaskStatus = "open" | "resolved";
 export type DailyReportStatus = "draft_created" | "skipped" | "failed" | "pending";
 export type MinuteSourceType = "recurring" | "adhoc";
 export type ExtractedTaskStatus = "pending" | "imported" | "dismissed";
+export type RoutineStatus = "active" | "archived";
 
 export interface User {
   id: string;
@@ -112,6 +113,17 @@ export interface ExtractedTask {
   suggested_due_date: string | null;
   status: ExtractedTaskStatus;
   created_at: string;
+}
+
+export interface Routine {
+  id: string;
+  user_id: string;
+  title: string;
+  memo: string | null;
+  status: RoutineStatus;
+  created_at: string;
+  updated_at: string;
+  tags: Tag[];
 }
 
 export interface CalendarEvent {
