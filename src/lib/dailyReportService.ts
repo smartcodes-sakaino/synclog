@@ -39,16 +39,17 @@ async function getCalendarEventLinesForDate(userId: string, dateISO: string): Pr
   // 終日予定・休憩や締め作業などの定型ブロックは日報には不要なため除外する
   return events
     .filter((e) => !e.allDay && !EXCLUDED_EVENT_TITLES.includes(e.title))
-    .map((e) => ({
-      time: e.start.slice(11, 16),
-      title: e.title,
-    }));
+    .map((e) => ({ title: e.title }));
+}
+
+// 「AIで生成」ボタンから呼び出す、完了タスクの箇条書き生成(ページ読み込み時には自動実行しない)
+export async function summarizeWorkItemsForDate(userId: string, dateISO: string): Promise<WorkItem[]> {
+  const titles = await getCompletedTaskTitlesForDate(userId, dateISO);
+  return summarizeDailyWork(titles);
 }
 
 export interface DailyReportPreview {
   reportDate: string;
-  clockIn: string;
-  clockOut: string;
   comment: string;
   workItems: WorkItem[];
   calendarEvents: CalendarEventLine[];
@@ -57,26 +58,19 @@ export interface DailyReportPreview {
 }
 
 export async function buildDailyReportPreview(userId: string, dateISO: string): Promise<DailyReportPreview> {
-  const existing = await queryOne<DailyReport>(
-    "select * from daily_reports where user_id = $1 and report_date = $2",
-    [userId, dateISO]
-  );
+  const [existing, calendarEvents] = await Promise.all([
+    queryOne<DailyReport>("select * from daily_reports where user_id = $1 and report_date = $2", [
+      userId,
+      dateISO,
+    ]),
+    getCalendarEventLinesForDate(userId, dateISO),
+  ]);
 
-  let workItems: WorkItem[] = existing?.work_items ?? [];
-  if (workItems.length === 0) {
-    const titles = await getCompletedTaskTitlesForDate(userId, dateISO);
-    workItems = await summarizeDailyWork(titles);
-  }
-
-  const clockIn = existing?.clock_in ?? "09:00";
-  const clockOut = existing?.clock_out ?? "18:00";
+  const workItems: WorkItem[] = existing?.work_items ?? [];
   const comment = existing?.comment ?? "";
-  const calendarEvents = await getCalendarEventLinesForDate(userId, dateISO);
 
   return {
     reportDate: dateISO,
-    clockIn,
-    clockOut,
     comment,
     workItems,
     calendarEvents,
@@ -88,8 +82,6 @@ export async function buildDailyReportPreview(userId: string, dateISO: string): 
 export interface GenerateOptions {
   respectSkipRules: boolean;
   comment?: string;
-  clockIn?: string;
-  clockOut?: string;
   workItems?: WorkItem[];
 }
 
@@ -102,8 +94,6 @@ export interface GenerateResult {
 async function upsertDailyReport(row: {
   userId: string;
   dateISO: string;
-  clockIn?: string;
-  clockOut?: string;
   comment?: string | null;
   workItems?: WorkItem[];
   gmailDraftId?: string | null;
@@ -112,11 +102,9 @@ async function upsertDailyReport(row: {
 }): Promise<DailyReport> {
   const [report] = await query<DailyReport>(
     `insert into daily_reports
-       (user_id, report_date, clock_in, clock_out, comment, work_items, gmail_draft_id, status, skip_reason)
-     values ($1, $2, coalesce($3, '09:00'), coalesce($4, '18:00'), $5, coalesce($6::jsonb, '[]'::jsonb), $7, $8, $9)
+       (user_id, report_date, comment, work_items, gmail_draft_id, status, skip_reason)
+     values ($1, $2, $3, coalesce($4::jsonb, '[]'::jsonb), $5, $6, $7)
      on conflict (user_id, report_date) do update set
-       clock_in = coalesce(excluded.clock_in, daily_reports.clock_in),
-       clock_out = coalesce(excluded.clock_out, daily_reports.clock_out),
        comment = coalesce(excluded.comment, daily_reports.comment),
        work_items = coalesce(excluded.work_items, daily_reports.work_items),
        gmail_draft_id = coalesce(excluded.gmail_draft_id, daily_reports.gmail_draft_id),
@@ -126,8 +114,6 @@ async function upsertDailyReport(row: {
     [
       row.userId,
       row.dateISO,
-      row.clockIn ?? null,
-      row.clockOut ?? null,
       row.comment ?? null,
       row.workItems ? JSON.stringify(row.workItems) : null,
       row.gmailDraftId ?? null,
@@ -159,8 +145,6 @@ export async function generateDailyReport(
 
   try {
     const preview = await buildDailyReportPreview(userId, dateISO);
-    const clockIn = options.clockIn ?? preview.clockIn;
-    const clockOut = options.clockOut ?? preview.clockOut;
     const comment = options.comment ?? preview.comment;
     const workItems = options.workItems ?? preview.workItems;
 
@@ -177,8 +161,6 @@ export async function generateDailyReport(
     const report = await upsertDailyReport({
       userId,
       dateISO,
-      clockIn,
-      clockOut,
       comment,
       workItems,
       gmailDraftId: draftId,

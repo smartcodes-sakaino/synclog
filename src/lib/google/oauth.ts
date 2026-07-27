@@ -24,7 +24,7 @@ export function createOAuthClient(redirectUri?: string) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error(
-      "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET が設定されていません(Replit Deployments の Secrets を確認してください)"
+      "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET が設定されていません(Vercelの環境変数を確認してください)"
     );
   }
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
@@ -34,11 +34,11 @@ export function createOAuthClient(redirectUri?: string) {
 function getAppBaseUrl(): string {
   const url = process.env.APP_BASE_URL;
   if (!url) {
-    throw new Error("APP_BASE_URL が設定されていません(Replit Deployments の Secrets を確認してください)");
+    throw new Error("APP_BASE_URL が設定されていません(Vercelの環境変数を確認してください)");
   }
   if (url.includes("localhost") && process.env.NODE_ENV === "production") {
     throw new Error(
-      `APP_BASE_URL が本番URLになっていません(現在の値: ${url})。Replit DeploymentsのSecretsを公開後のURLに更新してください`
+      `APP_BASE_URL が本番URLになっていません(現在の値: ${url})。Vercelの環境変数を公開後のURLに更新してください`
     );
   }
   return url;

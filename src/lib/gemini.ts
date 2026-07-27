@@ -18,8 +18,7 @@ export async function summarizeDailyWork(taskTitles: string[]): Promise<WorkItem
     model: MODEL,
     contents: [
       "以下は本日完了した業務タスクの一覧です。日報の「本日の作業内容」欄に載せる箇条書きとして、",
-      "実務報告らしい簡潔な日本語の文章に整え、それぞれの作業に想定所要時間(h、0.5刻み)を割り振ってください。",
-      "所要時間の合計はおよそ8.0hになるように調整してください。",
+      "実務報告らしい簡潔な日本語の文章に整えてください。",
       "",
       ...taskTitles.map((t) => `- ${t}`),
     ].join("\n"),
@@ -31,9 +30,8 @@ export async function summarizeDailyWork(taskTitles: string[]): Promise<WorkItem
           type: Type.OBJECT,
           properties: {
             title: { type: Type.STRING },
-            hours: { type: Type.NUMBER },
           },
-          required: ["title", "hours"],
+          required: ["title"],
         },
       },
     },

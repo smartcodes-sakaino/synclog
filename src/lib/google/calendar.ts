@@ -15,38 +15,38 @@ export async function listMergedEvents(
   timeMin: string,
   timeMax: string
 ): Promise<CalendarEvent[]> {
-  const results: CalendarEvent[] = [];
-
-  for (const account of accounts) {
-    const auth = await getAuthorizedClientForAccount(account);
-    const calendar = google.calendar({ version: "v3", auth });
-    const res = await calendar.events.list({
-      calendarId: "primary",
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: "startTime",
-    });
-
-    for (const event of res.data.items ?? []) {
-      if (!event.id) continue;
-      const start = event.start?.dateTime ?? event.start?.date ?? "";
-      const end = event.end?.dateTime ?? event.end?.date ?? "";
-      results.push({
-        id: `${account.id}:${event.id}`,
-        accountEmail: account.google_email,
-        accountColorKey: account.color_key,
-        title: event.summary ?? "(無題の予定)",
-        start,
-        end,
-        allDay: !event.start?.dateTime,
-        description: event.description ?? null,
-        meetUrl: event.hangoutLink ?? null,
+  const perAccountEvents = await Promise.all(
+    accounts.map(async (account) => {
+      const auth = await getAuthorizedClientForAccount(account);
+      const calendar = google.calendar({ version: "v3", auth });
+      const res = await calendar.events.list({
+        calendarId: "primary",
+        timeMin,
+        timeMax,
+        singleEvents: true,
+        orderBy: "startTime",
       });
-    }
-  }
 
-  return results.sort((a, b) => a.start.localeCompare(b.start));
+      return (res.data.items ?? []).flatMap((event): CalendarEvent[] => {
+        if (!event.id) return [];
+        return [
+          {
+            id: `${account.id}:${event.id}`,
+            accountEmail: account.google_email,
+            accountColorKey: account.color_key,
+            title: event.summary ?? "(無題の予定)",
+            start: event.start?.dateTime ?? event.start?.date ?? "",
+            end: event.end?.dateTime ?? event.end?.date ?? "",
+            allDay: !event.start?.dateTime,
+            description: event.description ?? null,
+            meetUrl: event.hangoutLink ?? null,
+          },
+        ];
+      });
+    })
+  );
+
+  return perAccountEvents.flat().sort((a, b) => a.start.localeCompare(b.start));
 }
 
 export interface NewCalendarEvent {

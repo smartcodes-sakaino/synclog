@@ -13,12 +13,12 @@ export async function GET(request: NextRequest) {
   const date = searchParams.get("date");
   if (!date) return NextResponse.json({ error: "date は必須です" }, { status: 400 });
 
-  const preview = await buildDailyReportPreview(userId, date);
-
-  const history = await query<DailyReport>(
-    "select * from daily_reports where user_id = $1 order by report_date desc limit 10",
-    [userId]
-  );
+  const [preview, history] = await Promise.all([
+    buildDailyReportPreview(userId, date),
+    query<DailyReport>("select * from daily_reports where user_id = $1 order by report_date desc limit 10", [
+      userId,
+    ]),
+  ]);
 
   return NextResponse.json({
     preview: { ...preview, to: DAILY_REPORT_TO },

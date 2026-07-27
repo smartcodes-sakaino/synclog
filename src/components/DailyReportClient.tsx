@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import type { DailyReport, WorkItem } from "@/types";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
+import { buildDailyReportBody } from "@/lib/dailyReportTemplate";
+import type { CalendarEventLine, DailyReport, WorkItem } from "@/types";
 
 const STATUS_LABEL: Record<string, string> = {
   draft_created: "作成済み",
@@ -13,35 +16,61 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function DailyReportClient() {
   const today = format(new Date(), "yyyy-MM-dd");
-  const [clockIn, setClockIn] = useState("09:00");
-  const [clockOut, setClockOut] = useState("18:00");
   const [comment, setComment] = useState("");
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEventLine[]>([]);
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
   const [to, setTo] = useState("");
   const [history, setHistory] = useState<DailyReport[]>([]);
   const [sending, setSending] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function load() {
-    const res = await fetch(`/api/daily-report?date=${today}`);
-    const data = await res.json();
-    const preview = data.preview;
-    setClockIn(preview.clockIn);
-    setClockOut(preview.clockOut);
-    setComment(preview.comment);
-    setWorkItems(preview.workItems);
-    setSubject(preview.subject);
-    setBody(preview.body);
-    setTo(preview.to);
-    setHistory(data.history ?? []);
+    try {
+      const data = await apiFetch<{
+        preview: { comment: string; workItems: WorkItem[]; calendarEvents: CalendarEventLine[]; subject: string; to: string };
+        history: DailyReport[];
+      }>(`/api/daily-report?date=${today}`);
+      setComment(data.preview.comment);
+      setWorkItems(data.preview.workItems);
+      setCalendarEvents(data.preview.calendarEvents);
+      setSubject(data.preview.subject);
+      setTo(data.preview.to);
+      setHistory(data.history ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "日報プレビューの取得に失敗しました");
+    }
   }
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // コメントや作業項目の編集がその場でプレビューに反映されるよう、送信前にクライアント側で組み立てる
+  const body = useMemo(
+    () => buildDailyReportBody({ dateISO: today, comment, workItems, calendarEvents }),
+    [today, comment, workItems, calendarEvents]
+  );
+
+  async function handleSummarize() {
+    setSummarizing(true);
+    setMessage(null);
+    try {
+      const data = await apiFetch<{ workItems: WorkItem[] }>("/api/daily-report/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: today }),
+      });
+      setWorkItems(data.workItems ?? []);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "AI生成に失敗しました");
+    } finally {
+      setSummarizing(false);
+    }
+  }
 
   async function handleGenerate() {
     setSending(true);
@@ -50,7 +79,7 @@ export default function DailyReportClient() {
       const res = await fetch("/api/daily-report/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: today, comment, clockIn, clockOut, workItems }),
+        body: JSON.stringify({ date: today, comment, workItems }),
       });
       const rawText = await res.text();
       let data: { error?: string } = {};
@@ -76,18 +105,16 @@ export default function DailyReportClient() {
   }
 
   function addWorkItem() {
-    setWorkItems((prev) => [...prev, { title: "", hours: 0 }]);
+    setWorkItems((prev) => [...prev, { title: "" }]);
   }
 
-  function updateWorkItem(index: number, field: "title" | "hours", value: string) {
-    setWorkItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, [field]: field === "hours" ? Number(value) : value } : item
-      )
-    );
+  function updateWorkItem(index: number, value: string) {
+    setWorkItems((prev) => prev.map((item, i) => (i === index ? { ...item, title: value } : item)));
   }
 
-  const totalHours = workItems.reduce((sum, item) => sum + (item.hours || 0), 0);
+  function removeWorkItem(index: number) {
+    setWorkItems((prev) => prev.filter((_, i) => i !== index));
+  }
 
   return (
     <main className="flex-grow p-container-padding flex flex-col gap-card-gap">
@@ -105,45 +132,31 @@ export default function DailyReportClient() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-card-gap">
         <div className="lg:col-span-7 space-y-card-gap">
           <div className="bg-white rounded-xl p-6 card-shadow border border-outline-variant/20">
-            <h3 className="font-headline-md text-headline-md text-on-surface mb-6 flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary">schedule</span>出社/退社(予定)時間
-            </h3>
-            <div className="flex gap-6">
-              <div className="flex-1">
-                <label className="block text-on-surface-variant font-label-sm text-label-sm mb-2">出社</label>
-                <input type="time" value={clockIn} onChange={(e) => setClockIn(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-4 py-3 text-center" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-on-surface-variant font-label-sm text-label-sm mb-2">退社</label>
-                <input type="time" value={clockOut} onChange={(e) => setClockOut(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-4 py-3 text-center" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 card-shadow border border-outline-variant/20">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                本日の完了タスク ({totalHours.toFixed(1)}h)
+                本日の完了タスク
               </h3>
-              <span className="bg-primary-container text-on-primary-container font-label-sm text-label-sm px-3 py-1 rounded-full">AI自動生成</span>
+              <button
+                onClick={handleSummarize}
+                disabled={summarizing}
+                className="bg-primary-container text-on-primary-container font-label-sm text-label-sm px-3 py-1.5 rounded-full flex items-center gap-1 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                {summarizing ? "生成中..." : "AIで生成"}
+              </button>
             </div>
             <div className="space-y-2">
               {workItems.map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input
                     value={item.title}
-                    onChange={(e) => updateWorkItem(i, "title", e.target.value)}
+                    onChange={(e) => updateWorkItem(i, e.target.value)}
                     className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
                   />
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={item.hours}
-                    onChange={(e) => updateWorkItem(i, "hours", e.target.value)}
-                    className="w-20 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm text-center"
-                  />
-                  <span className="text-sm text-on-surface-variant">h</span>
+                  <button onClick={() => removeWorkItem(i)} className="text-on-surface-variant hover:text-error flex-shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  </button>
                 </div>
               ))}
               <button onClick={addWorkItem} className="w-full mt-2 py-2 border-2 border-dashed border-outline-variant/60 rounded-lg text-outline font-label-sm text-label-sm hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2">

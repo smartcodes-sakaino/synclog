@@ -5,7 +5,7 @@
 export function absoluteUrl(path: string): URL {
   const base = process.env.APP_BASE_URL;
   if (!base) {
-    throw new Error("APP_BASE_URL が設定されていません(Replit Deployments の Secrets を確認してください)");
+    throw new Error("APP_BASE_URL が設定されていません(Vercelの環境変数を確認してください)");
   }
   return new URL(path, base);
 }

@@ -62,15 +62,12 @@ export interface GoogleAccount {
 
 export interface WorkItem {
   title: string;
-  hours: number;
 }
 
 export interface DailyReport {
   id: string;
   user_id: string;
   report_date: string;
-  clock_in: string;
-  clock_out: string;
   comment: string | null;
   work_items: WorkItem[];
   gmail_draft_id: string | null;
@@ -144,7 +141,6 @@ export interface CalendarEvent {
 }
 
 export interface CalendarEventLine {
-  time: string;
   title: string;
 }
 
