@@ -22,6 +22,9 @@ async function getCompletedTaskTitlesForDate(userId: string, dateISO: string): P
   return rows.map((t) => t.title);
 }
 
+// 日報の「本日の予定」には不要な、定型の作業ブロック
+const EXCLUDED_EVENT_TITLES = ["休憩", "締め作業"];
+
 // 連携済みの全アカウントから、その日のカレンダー予定をそのまま(AI要約せず)取得する
 async function getCalendarEventLinesForDate(userId: string, dateISO: string): Promise<CalendarEventLine[]> {
   const accounts = await listGoogleAccountsForUser(userId);
@@ -33,9 +36,9 @@ async function getCalendarEventLinesForDate(userId: string, dateISO: string): Pr
     `${dateISO}T23:59:59+09:00`
   );
 
-  // 終日予定は日報には不要なため除外する
+  // 終日予定・休憩や締め作業などの定型ブロックは日報には不要なため除外する
   return events
-    .filter((e) => !e.allDay)
+    .filter((e) => !e.allDay && !EXCLUDED_EVENT_TITLES.includes(e.title))
     .map((e) => ({
       time: e.start.slice(11, 16),
       title: e.title,

@@ -28,7 +28,7 @@ export function buildDailyReportBody(params: {
   const workLines = workItems.map((item) => `- ${item.title}`).join("\n");
   const eventLines =
     calendarEvents.length > 0
-      ? calendarEvents.map((e) => `- ${e.time} ${e.title}`).join("\n")
+      ? calendarEvents.map((e) => `- ${e.title}`).join("\n")
       : "- 予定はありません";
 
   return `各位
