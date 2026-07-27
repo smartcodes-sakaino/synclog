@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { Routine, RoutineLink, RoutineStatus } from "@/types";
 
 export default function RoutineDetailModal({
@@ -20,6 +22,7 @@ export default function RoutineDetailModal({
   const [links, setLinks] = useState<RoutineLink[]>(routine.links.length > 0 ? routine.links : [{ title: "", url: "" }]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { showToast } = useToast();
 
   function updateLink(index: number, field: keyof RoutineLink, value: string) {
     setLinks((prev) => prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)));
@@ -39,12 +42,14 @@ export default function RoutineDetailModal({
       const cleanLinks = links
         .filter((l) => l.url.trim() !== "")
         .map((l) => ({ title: l.title.trim() || l.url.trim(), url: l.url.trim() }));
-      await fetch(`/api/routines/${routine.id}`, {
+      await apiFetch(`/api/routines/${routine.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, memo: memo || null, status, links: cleanLinks }),
       });
       onSaved();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -54,8 +59,10 @@ export default function RoutineDetailModal({
     if (!confirm("このDashboardカードを削除しますか？")) return;
     setDeleting(true);
     try {
-      await fetch(`/api/routines/${routine.id}`, { method: "DELETE" });
+      await apiFetch(`/api/routines/${routine.id}`, { method: "DELETE" });
       onDeleted();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "削除に失敗しました");
     } finally {
       setDeleting(false);
     }

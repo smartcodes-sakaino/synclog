@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { ExtractedTask, MinuteSource } from "@/types";
 
 type SourceWithCount = MinuteSource & { extracted_task_count: number };
@@ -15,28 +17,31 @@ export default function MinutesClient() {
 
   const [recurringTitle, setRecurringTitle] = useState("");
   const [recurringUrl, setRecurringUrl] = useState("");
+  const { showToast } = useToast();
 
   async function loadSources() {
-    const res = await fetch("/api/minutes/sources");
-    const data = await res.json();
-    setSources(data.sources ?? []);
+    try {
+      const data = await apiFetch<{ sources: SourceWithCount[] }>("/api/minutes/sources");
+      setSources(data.sources ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "取得に失敗しました");
+    }
   }
 
   useEffect(() => {
     loadSources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function extract(url: string, minuteSourceId?: string) {
     setExtracting(true);
     setError(null);
     try {
-      const res = await fetch("/api/minutes/extract", {
+      const data = await apiFetch<{ extractedTasks: ExtractedTask[] }>("/api/minutes/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ docUrl: url, minuteSourceId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "抽出に失敗しました");
       setCandidates(data.extractedTasks ?? []);
       setSelected(new Set());
       loadSources();
@@ -49,14 +54,18 @@ export default function MinutesClient() {
 
   async function registerRecurring() {
     if (!recurringUrl.trim() || !recurringTitle.trim()) return;
-    await fetch("/api/minutes/sources", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ docUrl: recurringUrl, title: recurringTitle }),
-    });
-    setRecurringTitle("");
-    setRecurringUrl("");
-    loadSources();
+    try {
+      await apiFetch("/api/minutes/sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docUrl: recurringUrl, title: recurringTitle }),
+      });
+      setRecurringTitle("");
+      setRecurringUrl("");
+      loadSources();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "登録に失敗しました");
+    }
   }
 
   function toggleSelect(id: string) {
@@ -70,13 +79,17 @@ export default function MinutesClient() {
 
   async function importSelected() {
     if (selected.size === 0) return;
-    await fetch("/api/minutes/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ extractedTaskIds: [...selected] }),
-    });
-    setCandidates((prev) => prev.filter((c) => !selected.has(c.id)));
-    setSelected(new Set());
+    try {
+      await apiFetch("/api/minutes/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ extractedTaskIds: [...selected] }),
+      });
+      setCandidates((prev) => prev.filter((c) => !selected.has(c.id)));
+      setSelected(new Set());
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "インポートに失敗しました");
+    }
   }
 
   return (

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import TagPicker from "@/components/TagPicker";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { Priority, Task, TaskStatus } from "@/types";
 
 export default function TaskDetailModal({
@@ -23,11 +25,12 @@ export default function TaskDetailModal({
   const [tags, setTags] = useState(task.tags.map((t) => t.name));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { showToast } = useToast();
 
   async function handleSave() {
     setSaving(true);
     try {
-      await fetch(`/api/tasks/${task.id}`, {
+      await apiFetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -40,6 +43,8 @@ export default function TaskDetailModal({
         }),
       });
       onSaved();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -49,8 +54,10 @@ export default function TaskDetailModal({
     if (!confirm("このタスクを削除しますか？")) return;
     setDeleting(true);
     try {
-      await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+      await apiFetch(`/api/tasks/${task.id}`, { method: "DELETE" });
       onDeleted();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "削除に失敗しました");
     } finally {
       setDeleting(false);
     }

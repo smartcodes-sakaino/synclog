@@ -1,24 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { GoogleAccount } from "@/types";
 
 export default function SettingsClient() {
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
+  const { showToast } = useToast();
 
   async function load() {
-    const res = await fetch("/api/settings/google-accounts");
-    const data = await res.json();
-    setAccounts(data.accounts ?? []);
+    try {
+      const data = await apiFetch<{ accounts: GoogleAccount[] }>("/api/settings/google-accounts");
+      setAccounts(data.accounts ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "取得に失敗しました");
+    }
   }
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function disconnect(id: string) {
-    await fetch(`/api/settings/google-accounts/${id}`, { method: "DELETE" });
-    load();
+    try {
+      await apiFetch(`/api/settings/google-accounts/${id}`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "連携解除に失敗しました");
+    }
   }
 
   return (

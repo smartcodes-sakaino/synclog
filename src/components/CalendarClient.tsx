@@ -20,6 +20,8 @@ import {
   subWeeks,
 } from "date-fns";
 import EventModal from "@/components/EventModal";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { CalendarEvent } from "@/types";
 
 type ViewMode = "month" | "week" | "day";
@@ -46,6 +48,7 @@ export default function CalendarClient() {
   const [accounts, setAccounts] = useState<{ id: string; email: string; colorKey: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState>(null);
+  const { showToast } = useToast();
 
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (viewMode === "month") {
@@ -63,11 +66,15 @@ export default function CalendarClient() {
     setLoading(true);
     const start = rangeStart.toISOString();
     const end = rangeEnd.toISOString();
-    return fetch(`/api/calendar/events?start=${start}&end=${end}`)
-      .then((res) => res.json())
+    return apiFetch<{ events: CalendarEvent[]; accounts: { id: string; email: string; colorKey: string }[] }>(
+      `/api/calendar/events?start=${start}&end=${end}`
+    )
       .then((data) => {
         setEvents(data.events ?? []);
         setAccounts(data.accounts ?? []);
+      })
+      .catch((err) => {
+        showToast(err instanceof Error ? err.message : "予定の取得に失敗しました");
       })
       .finally(() => setLoading(false));
   }

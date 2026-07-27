@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import TagPicker from "@/components/TagPicker";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { FuzzyTask, FuzzyTaskStatus, Priority } from "@/types";
 
 export default function FuzzyTaskDetailModal({
@@ -28,16 +30,19 @@ export default function FuzzyTaskDetailModal({
   const [promotePriority, setPromotePriority] = useState<Priority>("medium");
   const [promoteTags, setPromoteTags] = useState<string[]>([]);
   const [promoting, setPromoting] = useState(false);
+  const { showToast } = useToast();
 
   async function handleSave() {
     setSaving(true);
     try {
-      await fetch(`/api/fuzzy-tasks/${fuzzyTask.id}`, {
+      await apiFetch(`/api/fuzzy-tasks/${fuzzyTask.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, memo: memo || null, status }),
       });
       onSaved();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -47,8 +52,10 @@ export default function FuzzyTaskDetailModal({
     if (!confirm("このふわふわタスクを削除しますか？")) return;
     setDeleting(true);
     try {
-      await fetch(`/api/fuzzy-tasks/${fuzzyTask.id}`, { method: "DELETE" });
+      await apiFetch(`/api/fuzzy-tasks/${fuzzyTask.id}`, { method: "DELETE" });
       onDeleted();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "削除に失敗しました");
     } finally {
       setDeleting(false);
     }
@@ -57,7 +64,7 @@ export default function FuzzyTaskDetailModal({
   async function handlePromote() {
     setPromoting(true);
     try {
-      await fetch(`/api/fuzzy-tasks/${fuzzyTask.id}/promote`, {
+      await apiFetch(`/api/fuzzy-tasks/${fuzzyTask.id}/promote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,6 +75,8 @@ export default function FuzzyTaskDetailModal({
         }),
       });
       onPromoted();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "タスク化に失敗しました");
     } finally {
       setPromoting(false);
     }

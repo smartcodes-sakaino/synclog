@@ -5,6 +5,8 @@ import TagFolderCard from "@/components/TagFolderCard";
 import FuzzyTaskPanel from "@/components/FuzzyTaskPanel";
 import TagPicker from "@/components/TagPicker";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { Tag, Task } from "@/types";
 
 const UNTAGGED_KEY = "__untagged__";
@@ -24,43 +26,59 @@ export default function DashboardClient({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [draggedTagId, setDraggedTagId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const { showToast } = useToast();
 
   // サーバーコンポーネント(page.tsx)で初回データを取得済みのため、
   // マウント時の再フェッチはせず、更新操作の後だけ呼び出す
   async function loadTasks() {
-    const res = await fetch("/api/tasks");
-    const data = await res.json();
-    setTasks(data.tasks ?? []);
+    try {
+      const data = await apiFetch<{ tasks: Task[] }>("/api/tasks");
+      setTasks(data.tasks ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "タスクの取得に失敗しました");
+    }
   }
 
   async function loadTags() {
-    const res = await fetch("/api/tags");
-    const data = await res.json();
-    setTags(data.tags ?? []);
+    try {
+      const data = await apiFetch<{ tags: Tag[] }>("/api/tags");
+      setTags(data.tags ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "タグの取得に失敗しました");
+    }
   }
 
   async function addTask() {
     if (!newTitle.trim()) return;
-    await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, tags: newTags }),
-    });
-    setNewTitle("");
-    setNewTags([]);
-    loadTasks();
-    loadTags();
+    try {
+      await apiFetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle, tags: newTags }),
+      });
+      setNewTitle("");
+      setNewTags([]);
+      loadTasks();
+      loadTags();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "タスクの追加に失敗しました");
+    }
   }
 
   async function toggleDone(taskId: string, done: boolean) {
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: done ? "done" : "todo" } : t))
     );
-    await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: done ? "done" : "todo" }),
-    });
+    try {
+      await apiFetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: done ? "done" : "todo" }),
+      });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "更新に失敗しました");
+      loadTasks();
+    }
   }
 
   const filteredTasks = tasks.filter((t) => {
@@ -82,6 +100,7 @@ export default function DashboardClient({
 
   function handleDrop(targetTagId: string) {
     if (!draggedTagId || draggedTagId === targetTagId) return;
+    let reorderedIds: string[] | null = null;
     setTags((prev) => {
       const next = [...prev];
       const fromIndex = next.findIndex((t) => t.id === draggedTagId);
@@ -89,16 +108,21 @@ export default function DashboardClient({
       if (fromIndex === -1 || toIndex === -1) return prev;
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
-
-      fetch("/api/tags/reorder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tagIds: next.map((t) => t.id) }),
-      });
-
+      reorderedIds = next.map((t) => t.id);
       return next;
     });
     setDraggedTagId(null);
+
+    if (reorderedIds) {
+      apiFetch("/api/tags/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tagIds: reorderedIds }),
+      }).catch((err) => {
+        showToast(err instanceof Error ? err.message : "並び替えの保存に失敗しました");
+        loadTags();
+      });
+    }
   }
 
   return (

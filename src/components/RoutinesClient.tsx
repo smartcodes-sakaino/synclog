@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import RoutineDetailModal from "@/components/RoutineDetailModal";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { Routine } from "@/types";
 
 const CARD_STYLES = [
@@ -17,22 +19,30 @@ export default function RoutinesClient({ initialRoutines }: { initialRoutines: R
   const [newTitle, setNewTitle] = useState("");
   const [selected, setSelected] = useState<Routine | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const { showToast } = useToast();
 
   async function load() {
-    const res = await fetch("/api/routines");
-    const data = await res.json();
-    setRoutines(data.routines ?? []);
+    try {
+      const data = await apiFetch<{ routines: Routine[] }>("/api/routines");
+      setRoutines(data.routines ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "取得に失敗しました");
+    }
   }
 
   async function addRoutine() {
     if (!newTitle.trim()) return;
-    await fetch("/api/routines", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle }),
-    });
-    setNewTitle("");
-    load();
+    try {
+      await apiFetch("/api/routines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      setNewTitle("");
+      load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "追加に失敗しました");
+    }
   }
 
   const visibleRoutines = routines.filter((r) => statusFilter === "all" || r.status === statusFilter);

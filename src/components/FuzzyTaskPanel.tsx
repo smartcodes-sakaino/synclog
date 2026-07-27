@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import FuzzyTaskDetailModal from "@/components/FuzzyTaskDetailModal";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { FuzzyTask } from "@/types";
 
 const CARD_STYLES = [
@@ -15,27 +17,37 @@ export default function FuzzyTaskPanel() {
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<FuzzyTask | null>(null);
+  const { showToast } = useToast();
 
   async function load() {
-    const res = await fetch("/api/fuzzy-tasks?status=open");
-    const data = await res.json();
-    setItems(data.fuzzyTasks ?? []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<{ fuzzyTasks: FuzzyTask[] }>("/api/fuzzy-tasks?status=open");
+      setItems(data.fuzzyTasks ?? []);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function addFuzzyTask() {
     if (!newTitle.trim()) return;
-    await fetch("/api/fuzzy-tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle }),
-    });
-    setNewTitle("");
-    load();
+    try {
+      await apiFetch("/api/fuzzy-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      setNewTitle("");
+      load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "追加に失敗しました");
+    }
   }
 
   return (

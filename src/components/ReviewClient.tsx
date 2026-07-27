@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { format, subMonths } from "date-fns";
+import { useToast } from "@/components/ToastProvider";
+import { apiFetch } from "@/lib/apiClient";
 import type { ReviewSummary } from "@/types";
 
 const BAR_COLORS = ["bg-primary", "bg-secondary", "bg-tertiary", "bg-outline"];
@@ -11,17 +13,19 @@ export default function ReviewClient() {
   const [periodEnd, setPeriodEnd] = useState(format(new Date(), "yyyy-MM-dd"));
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   async function generate() {
     setLoading(true);
     try {
-      const res = await fetch("/api/review/summarize", {
+      const data = await apiFetch<{ reviewSummary: ReviewSummary }>("/api/review/summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ periodStart, periodEnd }),
       });
-      const data = await res.json();
       setSummary(data.reviewSummary);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "生成に失敗しました");
     } finally {
       setLoading(false);
     }
