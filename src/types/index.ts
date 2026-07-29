@@ -128,6 +128,17 @@ export interface Routine {
   updated_at: string;
 }
 
+export interface Workflow {
+  id: string;
+  user_id: string;
+  title: string;
+  to_emails: string;
+  subject: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CalendarEvent {
   id: string;
   accountEmail: string;

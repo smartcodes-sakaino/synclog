@@ -114,7 +114,7 @@ create table if not exists extracted_tasks (
   created_at timestamptz not null default now()
 );
 
--- Dashboard(よく使うリンクをまとめたワークフローカード)
+-- Dashboard(よく使うリンクをまとめたカード)
 create table if not exists routines (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
@@ -126,6 +126,19 @@ create table if not exists routines (
   updated_at timestamptz not null default now()
 );
 create index if not exists idx_routines_user_status on routines(user_id, status);
+
+-- ワークフロー(定型のGmail下書きをワンクリック作成するボタン集)
+create table if not exists workflows (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  title text not null,
+  to_emails text not null,
+  subject text not null,
+  body text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_workflows_user on workflows(user_id);
 
 -- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
 -- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
@@ -142,3 +155,4 @@ alter table review_summaries enable row level security;
 alter table minute_sources enable row level security;
 alter table extracted_tasks enable row level security;
 alter table routines enable row level security;
+alter table workflows enable row level security;
