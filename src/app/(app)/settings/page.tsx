@@ -8,6 +8,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   no_refresh_token: "Googleから継続利用に必要な権限を取得できませんでした。一度連携を解除し、再度同意画面で許可してください。",
   save_failed: "連携情報の保存に失敗しました。",
   config_error: "サーバー側の設定に問題があります。",
+  slack_token_exchange_failed: "Slackとの認証に失敗しました。",
 };
 
 export default async function SettingsPage({

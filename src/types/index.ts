@@ -128,6 +128,16 @@ export interface Routine {
   updated_at: string;
 }
 
+export interface SlackAccount {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  workspace_name: string;
+  slack_user_id: string;
+  scopes: string | null;
+  created_at: string;
+}
+
 export interface Workflow {
   id: string;
   user_id: string;

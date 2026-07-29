@@ -140,6 +140,21 @@ create table if not exists workflows (
 );
 create index if not exists idx_workflows_user on workflows(user_id);
 
+-- Slack連携(ワークスペースごとに複数保存できる。Slackのトークンはワークスペース単位で
+-- 発行されるため、Googleアカウントと同様に複数行を許容する)
+create table if not exists slack_accounts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  workspace_id text not null,
+  workspace_name text not null,
+  slack_user_id text not null,
+  access_token_encrypted text not null,
+  scopes text,
+  created_at timestamptz not null default now(),
+  unique (user_id, workspace_id)
+);
+create index if not exists idx_slack_accounts_user on slack_accounts(user_id);
+
 -- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
 -- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
 -- 将来的に閲覧専用ロール等を追加する場合に備え、防御的にRow Level Securityを有効化しておく
@@ -156,3 +171,4 @@ alter table minute_sources enable row level security;
 alter table extracted_tasks enable row level security;
 alter table routines enable row level security;
 alter table workflows enable row level security;
+alter table slack_accounts enable row level security;
