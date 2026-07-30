@@ -5,10 +5,12 @@ import { getCurrentUserId } from "@/lib/auth";
 import type { Workflow } from "@/types";
 
 const updateWorkflowSchema = z.object({
+  kind: z.enum(["gmail_draft", "slack_create_channel"]).optional(),
   title: z.string().min(1).optional(),
-  to_emails: z.string().min(1).optional(),
-  subject: z.string().min(1).optional(),
-  body: z.string().min(1).optional(),
+  to_emails: z.string().nullable().optional(),
+  subject: z.string().nullable().optional(),
+  body: z.string().nullable().optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,13 +18,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const fields = updateWorkflowSchema.parse(await request.json());
+  const { config, ...fields } = updateWorkflowSchema.parse(await request.json());
 
   const setClauses: string[] = ["updated_at = now()"];
   const values: unknown[] = [];
   for (const [key, value] of Object.entries(fields)) {
     values.push(value);
     setClauses.push(`${key} = $${values.length}`);
+  }
+  if (config !== undefined) {
+    values.push(JSON.stringify(config));
+    setClauses.push(`config = $${values.length}::jsonb`);
   }
   values.push(id, userId);
 

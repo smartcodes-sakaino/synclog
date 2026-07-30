@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import WorkflowDetailModal from "@/components/WorkflowDetailModal";
+import WorkflowRunModal from "@/components/WorkflowRunModal";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch } from "@/lib/apiClient";
 import type { Workflow } from "@/types";
@@ -12,10 +13,16 @@ const CARD_STYLES = [
   "bg-secondary-fixed-dim/30 border-secondary-fixed text-on-secondary-fixed-variant",
 ];
 
+const KIND_LABEL: Record<Workflow["kind"], { icon: string; button: string }> = {
+  gmail_draft: { icon: "mail", button: "下書きを作成" },
+  slack_create_channel: { icon: "tag", button: "チャンネルを作成" },
+};
+
 export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows: Workflow[] }) {
   const [workflows, setWorkflows] = useState<Workflow[]>(initialWorkflows);
   const [editing, setEditing] = useState<Workflow | null>(null);
   const [creating, setCreating] = useState(false);
+  const [running, setRunning] = useState<Workflow | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
   const { showToast } = useToast();
 
@@ -28,7 +35,7 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
     }
   }
 
-  async function run(workflow: Workflow) {
+  async function runGmailDraft(workflow: Workflow) {
     setRunningId(workflow.id);
     try {
       await apiFetch(`/api/workflows/${workflow.id}/run`, { method: "POST" });
@@ -40,6 +47,14 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
     }
   }
 
+  function handleRunClick(workflow: Workflow) {
+    if (workflow.kind === "slack_create_channel") {
+      setRunning(workflow);
+    } else {
+      runGmailDraft(workflow);
+    }
+  }
+
   return (
     <div className="p-container-padding">
       <div className="glass-panel rounded-[24px] p-6 mb-6">
@@ -48,7 +63,7 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
           ワークフロー
         </h3>
         <p className="font-body-md text-body-md text-on-surface-variant mb-4">
-          定型業務をボタン一つでGmail下書き作成まで実行します
+          定型業務をボタン一つで実行します(Gmail下書き作成・Slackチャンネル作成など)
         </p>
         <button
           onClick={() => setCreating(true)}
@@ -73,14 +88,16 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
                 <span className="material-symbols-outlined text-[18px]">edit</span>
               </button>
             </div>
-            <p className="text-xs text-on-surface-variant/70 truncate">宛先: {workflow.to_emails}</p>
+            <p className="text-xs text-on-surface-variant/70 truncate">
+              {workflow.kind === "gmail_draft" ? `宛先: ${workflow.to_emails}` : "Slackチャンネル作成+招待"}
+            </p>
             <button
-              onClick={() => run(workflow)}
+              onClick={() => handleRunClick(workflow)}
               disabled={runningId === workflow.id}
               className="bg-surface/70 hover:bg-surface rounded-lg py-2 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px]">mail</span>
-              {runningId === workflow.id ? "作成中..." : "下書きを作成"}
+              <span className="material-symbols-outlined text-[18px]">{KIND_LABEL[workflow.kind].icon}</span>
+              {runningId === workflow.id ? "作成中..." : KIND_LABEL[workflow.kind].button}
             </button>
           </div>
         ))}
@@ -110,6 +127,9 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
             load();
           }}
         />
+      )}
+      {running && (
+        <WorkflowRunModal workflow={running} onClose={() => setRunning(null)} onRan={() => setRunning(null)} />
       )}
     </div>
   );

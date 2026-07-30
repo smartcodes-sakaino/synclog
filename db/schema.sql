@@ -127,14 +127,17 @@ create table if not exists routines (
 );
 create index if not exists idx_routines_user_status on routines(user_id, status);
 
--- ワークフロー(定型のGmail下書きをワンクリック作成するボタン集)
+-- ワークフロー(定型業務をワンクリックで実行するボタン集。
+-- kind='gmail_draft'はto_emails/subject/bodyを、kind='slack_create_channel'はconfigを使う)
 create table if not exists workflows (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
+  kind text not null default 'gmail_draft' check (kind in ('gmail_draft', 'slack_create_channel')),
   title text not null,
-  to_emails text not null,
-  subject text not null,
-  body text not null,
+  to_emails text,
+  subject text,
+  body text,
+  config jsonb not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

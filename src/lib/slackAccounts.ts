@@ -9,3 +9,16 @@ export async function listSlackAccountsForUser(userId: string): Promise<SlackAcc
     [userId]
   );
 }
+
+// 指定ワークスペースの連携アカウントを返す。指定が無い/見つからない場合は最初に連携したものを返す
+export async function getSlackAccountForWorkspace(
+  userId: string,
+  workspaceId?: string
+): Promise<SlackAccountWithToken | null> {
+  const accounts = await listSlackAccountsForUser(userId);
+  if (accounts.length === 0) return null;
+  if (workspaceId) {
+    return accounts.find((a) => a.workspace_id === workspaceId) ?? accounts[0];
+  }
+  return accounts[0];
+}

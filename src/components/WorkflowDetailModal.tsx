@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch } from "@/lib/apiClient";
-import type { Workflow } from "@/types";
+import type { SlackAccount, SlackCreateChannelConfig, Workflow, WorkflowKind } from "@/types";
 
 type Props =
   | { mode: "create"; onClose: () => void; onSaved: () => void }
@@ -11,19 +11,65 @@ type Props =
 
 export default function WorkflowDetailModal(props: Props) {
   const isEdit = props.mode === "edit";
-  const [title, setTitle] = useState(isEdit ? props.workflow.title : "");
-  const [toEmails, setToEmails] = useState(isEdit ? props.workflow.to_emails : "");
-  const [subject, setSubject] = useState(isEdit ? props.workflow.subject : "");
-  const [body, setBody] = useState(isEdit ? props.workflow.body : "");
+  const initial = isEdit ? props.workflow : null;
+  const initialConfig = (initial?.config ?? {}) as Partial<SlackCreateChannelConfig>;
+
+  const [kind, setKind] = useState<WorkflowKind>(initial?.kind ?? "gmail_draft");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [toEmails, setToEmails] = useState(initial?.to_emails ?? "");
+  const [subject, setSubject] = useState(initial?.subject ?? "");
+  const [body, setBody] = useState(initial?.body ?? "");
+
+  const [slackAccounts, setSlackAccounts] = useState<SlackAccount[]>([]);
+  const [workspaceId, setWorkspaceId] = useState(initialConfig.workspaceId ?? "");
+  const [channelNameTemplate, setChannelNameTemplate] = useState(initialConfig.channelNameTemplate ?? "");
+  const [visibility, setVisibility] = useState<"private" | "public">(initialConfig.visibility ?? "private");
+  const [inviteUserIds, setInviteUserIds] = useState((initialConfig.inviteUserIds ?? []).join(", "));
+
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { showToast } = useToast();
 
+  useEffect(() => {
+    if (kind !== "slack_create_channel") return;
+    apiFetch<{ accounts: SlackAccount[] }>("/api/settings/slack-accounts")
+      .then((data) => {
+        setSlackAccounts(data.accounts ?? []);
+        setWorkspaceId((prev) => prev || data.accounts?.[0]?.workspace_id || "");
+      })
+      .catch((err) => showToast(err instanceof Error ? err.message : "Slack連携の取得に失敗しました"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind]);
+
+  const isValid =
+    title.trim() !== "" &&
+    (kind === "gmail_draft"
+      ? toEmails.trim() !== "" && subject.trim() !== "" && body.trim() !== ""
+      : workspaceId !== "" && channelNameTemplate.trim() !== "");
+
   async function handleSave() {
-    if (!title.trim() || !toEmails.trim() || !subject.trim() || !body.trim()) return;
+    if (!isValid) return;
     setSaving(true);
     try {
-      const payload = { title, to_emails: toEmails, subject, body };
+      const payload =
+        kind === "gmail_draft"
+          ? { kind, title, to_emails: toEmails, subject, body, config: {} }
+          : {
+              kind,
+              title,
+              to_emails: null,
+              subject: null,
+              body: null,
+              config: {
+                workspaceId,
+                channelNameTemplate,
+                visibility,
+                inviteUserIds: inviteUserIds
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              },
+            };
       if (isEdit) {
         await apiFetch(`/api/workflows/${props.workflow.id}`, {
           method: "PATCH",
@@ -73,6 +119,24 @@ export default function WorkflowDetailModal(props: Props) {
 
         <div className="flex flex-col gap-4">
           <div>
+            <label className="block text-label-sm text-on-surface-variant mb-1">種類</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setKind("gmail_draft")}
+                className={`px-4 py-2 rounded-full text-sm font-bold ${kind === "gmail_draft" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant"}`}
+              >
+                Gmail下書き
+              </button>
+              <button
+                onClick={() => setKind("slack_create_channel")}
+                className={`px-4 py-2 rounded-full text-sm font-bold ${kind === "slack_create_channel" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant"}`}
+              >
+                Slackチャンネル作成
+              </button>
+            </div>
+          </div>
+
+          <div>
             <label className="block text-label-sm text-on-surface-variant mb-1">ボタン名</label>
             <input
               value={title}
@@ -81,32 +145,97 @@ export default function WorkflowDetailModal(props: Props) {
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2"
             />
           </div>
-          <div>
-            <label className="block text-label-sm text-on-surface-variant mb-1">宛先</label>
-            <input
-              value={toEmails}
-              onChange={(e) => setToEmails(e.target.value)}
-              placeholder="a@example.com, b@example.com"
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-label-sm text-on-surface-variant mb-1">件名</label>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-label-sm text-on-surface-variant mb-1">本文</label>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={14}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm resize-none"
-            />
-          </div>
+
+          {kind === "gmail_draft" ? (
+            <>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">宛先</label>
+                <input
+                  value={toEmails}
+                  onChange={(e) => setToEmails(e.target.value)}
+                  placeholder="a@example.com, b@example.com"
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">件名</label>
+                <input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">本文</label>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={14}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm resize-none"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">対象ワークスペース</label>
+                <select
+                  value={workspaceId}
+                  onChange={(e) => setWorkspaceId(e.target.value)}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">選択してください</option>
+                  {slackAccounts.map((a) => (
+                    <option key={a.id} value={a.workspace_id}>
+                      {a.workspace_name}
+                    </option>
+                  ))}
+                </select>
+                {slackAccounts.length === 0 && (
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    連携済みのSlackワークスペースがありません。Settingsから連携してください。
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">
+                  チャンネル名(実行時に編集できます)
+                </label>
+                <input
+                  value={channelNameTemplate}
+                  onChange={(e) => setChannelNameTemplate(e.target.value)}
+                  placeholder="例: nc研修yymm-name"
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setVisibility("private")}
+                  className={`px-4 py-2 rounded-full text-sm font-bold ${visibility === "private" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant"}`}
+                >
+                  非公開チャンネル
+                </button>
+                <button
+                  onClick={() => setVisibility("public")}
+                  className={`px-4 py-2 rounded-full text-sm font-bold ${visibility === "public" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant"}`}
+                >
+                  公開チャンネル
+                </button>
+              </div>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">招待するユーザーID</label>
+                <input
+                  value={inviteUserIds}
+                  onChange={(e) => setInviteUserIds(e.target.value)}
+                  placeholder="U07EU1B3G74, U0896L8FNTE"
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm"
+                />
+                <p className="text-xs text-on-surface-variant mt-1">
+                  カンマ区切りでSlackのメンバーIDを入力(SlackのプロフィールからCopy member IDで取得できます)
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex justify-between items-center mt-6 pt-4 border-t border-outline-variant/20">
@@ -123,7 +252,7 @@ export default function WorkflowDetailModal(props: Props) {
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !title.trim() || !toEmails.trim() || !subject.trim() || !body.trim()}
+              disabled={saving || !isValid}
               className="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-bold disabled:opacity-50"
             >
               {saving ? "保存中..." : "保存する"}

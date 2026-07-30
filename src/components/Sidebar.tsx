@@ -5,10 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/routines", label: "Dashboard", icon: "dashboard" },
-  { href: "/workflows", label: "Workflow", icon: "bolt" },
   { href: "/", label: "Task", icon: "checklist" },
   { href: "/calendar", label: "Calendar", icon: "calendar_today" },
   { href: "/daily-report", label: "Daily Report", icon: "summarize" },
+  { href: "/workflows", label: "Workflow", icon: "bolt" },
   { href: "/review", label: "Review", icon: "analytics" },
   { href: "/minutes", label: "Minutes", icon: "edit_note" },
 ];

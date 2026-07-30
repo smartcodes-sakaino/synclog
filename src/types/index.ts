@@ -138,13 +138,24 @@ export interface SlackAccount {
   created_at: string;
 }
 
+export type WorkflowKind = "gmail_draft" | "slack_create_channel";
+
+export interface SlackCreateChannelConfig {
+  workspaceId: string;
+  channelNameTemplate: string;
+  visibility: "private" | "public";
+  inviteUserIds: string[];
+}
+
 export interface Workflow {
   id: string;
   user_id: string;
+  kind: WorkflowKind;
   title: string;
-  to_emails: string;
-  subject: string;
-  body: string;
+  to_emails: string | null;
+  subject: string | null;
+  body: string | null;
+  config: Partial<SlackCreateChannelConfig>;
   created_at: string;
   updated_at: string;
 }
