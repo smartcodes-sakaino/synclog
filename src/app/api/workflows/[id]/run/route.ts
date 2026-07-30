@@ -38,7 +38,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       const channel = await createSlackChannel(account, channelName, config.visibility !== "public");
-      await inviteToSlackChannel(account, channel.id, config.inviteUserIds ?? []);
+      // チャンネル作成者(=このトークンの持ち主)は自動的にメンバーになっており、
+      // 招待リストに含まれているとSlack APIがcant_invite_selfを返すため除外する
+      const inviteUserIds = (config.inviteUserIds ?? []).filter((uid) => uid !== account.slack_user_id);
+      await inviteToSlackChannel(account, channel.id, inviteUserIds);
       return NextResponse.json({ channel });
     }
 
