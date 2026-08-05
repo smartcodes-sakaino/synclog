@@ -18,3 +18,14 @@ export async function getPrimaryGoogleAccount(userId: string): Promise<GoogleAcc
   const accounts = await listGoogleAccountsForUser(userId);
   return accounts[0] ?? null;
 }
+
+// OAuth同意画面が「テスト」公開のままだとリフレッシュトークンが7日で失効するため、
+// 6日以上再連携していないアカウントがあれば警告バナーを出す判定に使う
+export async function hasStaleGoogleConnection(userId: string): Promise<boolean> {
+  const rows = await query<{ stale: boolean | null }>(
+    `select bool_or(connected_at < now() - interval '6 days') as stale
+     from google_accounts where user_id = $1`,
+    [userId]
+  );
+  return rows[0]?.stale ?? false;
+}

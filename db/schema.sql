@@ -21,6 +21,9 @@ create table if not exists google_accounts (
   refresh_token_encrypted text,
   token_expiry timestamptz,
   scopes text,
+  -- 最後に(再)連携した日時。OAuth同意画面が「テスト」公開のままだと
+  -- リフレッシュトークンが7日で失効するため、再連携を促す警告バナーの判定に使う
+  connected_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   unique (user_id, google_email)
 );

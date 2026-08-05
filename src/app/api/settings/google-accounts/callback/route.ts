@@ -69,15 +69,16 @@ export async function GET(request: NextRequest) {
   try {
     await query(
       `insert into google_accounts
-         (user_id, google_email, account_label, color_key, access_token_encrypted, refresh_token_encrypted, token_expiry, scopes)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
+         (user_id, google_email, account_label, color_key, access_token_encrypted, refresh_token_encrypted, token_expiry, scopes, connected_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, now())
        on conflict (user_id, google_email) do update set
          account_label = excluded.account_label,
          color_key = excluded.color_key,
          access_token_encrypted = excluded.access_token_encrypted,
          refresh_token_encrypted = excluded.refresh_token_encrypted,
          token_expiry = excluded.token_expiry,
-         scopes = excluded.scopes`,
+         scopes = excluded.scopes,
+         connected_at = now()`,
       [
         userId,
         profileEmail,
