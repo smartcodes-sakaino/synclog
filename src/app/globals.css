@@ -149,3 +149,21 @@ body {
 .avatar-idle {
   animation: avatar-breathe 4.5s ease-in-out infinite;
 }
+
+/* レベル40以降、背景に表示する脈動オーラ(色相・速さはJS側でインラインstyleとして指定) */
+@keyframes aura-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+.aura-pulse {
+  animation-name: aura-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}

@@ -31,16 +31,38 @@ function getTier(level: number): Tier {
   return TIERS.find((t) => level <= t.max) ?? TIERS[TIERS.length - 1];
 }
 
-// レベルが上がるほど、絵の切り替わり(10刻み)とは別に、グローの強さも連続的に強くなっていく
-function getGlowStyle(level: number): CSSProperties | undefined {
-  if (level < 40) return undefined;
-  const intensity = Math.min(1, (level - 40) / 60);
-  const blur = Math.round(14 + intensity * 24);
-  let color: string;
-  if (level < 70) color = `rgba(192,197,255,${(0.35 + intensity * 0.3).toFixed(2)})`;
-  else if (level < 90) color = `rgba(255,200,87,${(0.45 + intensity * 0.3).toFixed(2)})`;
-  else color = `rgba(255,120,190,${(0.55 + intensity * 0.3).toFixed(2)})`;
-  return { filter: `drop-shadow(0 0 ${blur}px ${color})` };
+interface AuraStyles {
+  glowStyle: CSSProperties;
+  auraStyle: CSSProperties;
+  pulseDuration: string;
+}
+
+// レベルが上がるほど、絵の切り替わり(10刻み)とは別に、背景オーラの色相(ミント→水色→紫→
+// ピンク→ゴールド)・強さ・脈動の速さが連続的に変化していく。強弱だけでなく色そのものが
+// 変わることで、同じ立ち絵の中でも成長が体感しやすいようにしている
+function getAuraStyles(level: number): AuraStyles | null {
+  if (level < 40) return null;
+  const t = Math.min(1, (level - 40) / 60);
+  const hue = Math.round(160 + t * 260) % 360;
+  const blur = Math.round(16 + t * 22);
+  const glowOpacity = (0.45 + t * 0.35).toFixed(2);
+  const auraOpacity = (0.25 + t * 0.5).toFixed(2);
+  const auraSize = Math.round(65 + t * 45);
+  const pulseDuration = (3.2 - t * 1.9).toFixed(2);
+
+  return {
+    glowStyle: {
+      filter: `drop-shadow(0 0 ${blur}px hsla(${hue}, 85%, 70%, ${glowOpacity}))`,
+    },
+    auraStyle: {
+      width: `${auraSize}%`,
+      height: `${auraSize}%`,
+      background: `radial-gradient(circle, hsla(${hue}, 90%, 70%, ${auraOpacity}) 0%, transparent 72%)`,
+      filter: "blur(6px)",
+      animationDuration: `${pulseDuration}s`,
+    },
+    pulseDuration,
+  };
 }
 
 export default function AvatarPanel({ initialUserLevel }: { initialUserLevel: UserLevel }) {
@@ -75,6 +97,7 @@ export default function AvatarPanel({ initialUserLevel }: { initialUserLevel: Us
   }
 
   const tier = getTier(userLevel.level);
+  const aura = getAuraStyles(userLevel.level);
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-10 py-12 px-8">
@@ -85,14 +108,21 @@ export default function AvatarPanel({ initialUserLevel }: { initialUserLevel: Us
         <span className="font-headline-lg text-headline-lg text-primary">Lv. {userLevel.level}</span>
       </div>
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={tier.image}
-        alt="相棒"
-        className="avatar-idle w-72 md:w-[26rem] select-none"
-        draggable={false}
-        style={getGlowStyle(userLevel.level)}
-      />
+      <div className="relative flex items-center justify-center">
+        {aura && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="aura-pulse rounded-full" style={aura.auraStyle} />
+          </div>
+        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={tier.image}
+          alt="相棒"
+          className="avatar-idle relative w-72 md:w-[26rem] select-none"
+          draggable={false}
+          style={aura?.glowStyle}
+        />
+      </div>
 
       <div className="bg-surface-container-lowest border-2 border-on-surface/80 rounded-2xl px-8 py-5 max-w-lg w-full text-center card-shadow min-h-[5rem] flex items-center justify-center">
         <p className="font-headline-md text-headline-md text-on-surface">{message ?? "…"}</p>
