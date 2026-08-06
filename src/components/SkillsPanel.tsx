@@ -8,6 +8,7 @@ import type { Skill } from "@/types";
 export default function SkillsPanel({ initialSkills }: { initialSkills: Skill[] }) {
   const [skills, setSkills] = useState<Skill[]>(initialSkills);
   const [newSkillTitle, setNewSkillTitle] = useState("");
+  const [newSkillYears, setNewSkillYears] = useState("");
   const [newExperienceTitle, setNewExperienceTitle] = useState("");
   const [newExperienceDesc, setNewExperienceDesc] = useState("");
   const [resume, setResume] = useState<string | null>(null);
@@ -25,13 +26,15 @@ export default function SkillsPanel({ initialSkills }: { initialSkills: Skill[] 
 
   async function addSkill() {
     if (!newSkillTitle.trim()) return;
+    const years = newSkillYears.trim() ? Number(newSkillYears) : undefined;
     try {
       await apiFetch("/api/skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: "skill", title: newSkillTitle }),
+        body: JSON.stringify({ category: "skill", title: newSkillTitle, years }),
       });
       setNewSkillTitle("");
+      setNewSkillYears("");
       load();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "追加に失敗しました");
@@ -102,6 +105,7 @@ export default function SkillsPanel({ initialSkills }: { initialSkills: Skill[] 
               className="group flex items-center gap-1 bg-primary-container text-on-primary-container rounded-full pl-3 pr-1.5 py-1 text-sm font-bold"
             >
               {s.title}
+              {s.years != null && <span className="opacity-70 font-normal">({s.years}年)</span>}
               <button onClick={() => removeSkill(s.id)} className="opacity-60 hover:opacity-100">
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
@@ -116,6 +120,17 @@ export default function SkillsPanel({ initialSkills }: { initialSkills: Skill[] 
             onKeyDown={(e) => e.key === "Enter" && addSkill()}
             placeholder="例: Next.js"
             className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            value={newSkillYears}
+            onChange={(e) => setNewSkillYears(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addSkill()}
+            type="number"
+            min={0}
+            max={80}
+            step={0.5}
+            placeholder="年数"
+            className="w-20 bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 text-sm"
           />
           <button onClick={addSkill} className="bg-primary text-on-primary rounded-lg px-4 py-2 text-sm font-bold">
             追加

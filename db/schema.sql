@@ -168,11 +168,21 @@ create table if not exists skills (
   category text not null default 'skill' check (category in ('skill', 'experience')),
   title text not null,
   description text,
+  years numeric,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists idx_skills_user_category on skills(user_id, category);
+
+-- マイページ「社会人レベル」(1〜100、AIがスキル・職務経歴から判定してキャッシュしておく。
+-- 毎回自動判定はしない=ボタン操作時のみGemini呼び出し)
+create table if not exists user_levels (
+  user_id uuid primary key references users(id) on delete cascade,
+  level integer not null default 1 check (level between 1 and 100),
+  reasoning text,
+  updated_at timestamptz not null default now()
+);
 
 -- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
 -- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
@@ -192,3 +202,4 @@ alter table routines enable row level security;
 alter table workflows enable row level security;
 alter table slack_accounts enable row level security;
 alter table skills enable row level security;
+alter table user_levels enable row level security;

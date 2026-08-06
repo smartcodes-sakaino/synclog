@@ -121,7 +121,7 @@ export async function generateCompanionMessage(context: CompanionContext): Promi
     contents: [
       "あなたはタスク管理アプリ「SyncLog」に住む、クマの相棒キャラクターです。",
       "ユーザーの1日に寄り添い、RPGのキャラクターのような短い一言セリフを日本語で返してください。",
-      "口調は親しみやすく前向き、敬語ではなくフランクな話し言葉。絵文字や記号、鍵括弧、名前の名乗りは付けず、セリフ本文のみを1文で返してください。25文字前後を目安にしてください。",
+      "口調は親しみやすく前向きな敬語(です・ます調)。絵文字や記号、鍵括弧、名前の名乗りは付けず、セリフ本文のみを1文で返してください。25〜35文字程度を目安にしてください。",
       "",
       `現在の時間帯: ${TIME_LABEL[context.timeOfDay]}`,
       `今日が期限のタスク: ${context.dueTodayTitles.length > 0 ? context.dueTodayTitles.join("、") : "なし"}`,
@@ -134,16 +134,23 @@ export async function generateCompanionMessage(context: CompanionContext): Promi
   return (response.text ?? "").trim();
 }
 
+interface SkillEntry {
+  title: string;
+  description: string | null;
+  years?: number | null;
+}
+
+function formatSkillLine(s: SkillEntry): string {
+  const yearsPart = s.years ? `(${s.years}年)` : "";
+  const descPart = s.description ? `: ${s.description}` : "";
+  return `- ${s.title}${yearsPart}${descPart}`;
+}
+
 // 登録済みのスキル・職務経歴メモから、職務経歴書として使える文章を整形する
-export async function generateResume(
-  skills: { title: string; description: string | null }[],
-  experience: { title: string; description: string | null }[]
-): Promise<string> {
+export async function generateResume(skills: SkillEntry[], experience: SkillEntry[]): Promise<string> {
   const ai = getClient();
-  const skillLines =
-    skills.map((s) => `- ${s.title}${s.description ? `: ${s.description}` : ""}`).join("\n") || "(登録なし)";
-  const experienceLines =
-    experience.map((e) => `- ${e.title}${e.description ? `: ${e.description}` : ""}`).join("\n") || "(登録なし)";
+  const skillLines = skills.map(formatSkillLine).join("\n") || "(登録なし)";
+  const experienceLines = experience.map(formatSkillLine).join("\n") || "(登録なし)";
 
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -161,4 +168,46 @@ export async function generateResume(
   });
 
   return response.text ?? "";
+}
+
+export interface SocialLevelResult {
+  level: number;
+  reasoning: string;
+}
+
+// 登録済みのスキル・職務経歴から、1〜100の「社会人レベル」をAIが判定する
+export async function assessSocialLevel(skills: SkillEntry[], experience: SkillEntry[]): Promise<SocialLevelResult> {
+  const ai = getClient();
+  const skillLines = skills.map(formatSkillLine).join("\n") || "(登録なし)";
+  const experienceLines = experience.map(formatSkillLine).join("\n") || "(登録なし)";
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      "以下はある人物のスキル一覧と職務経歴です。これをもとに、1〜100の「社会人レベル」を判定してください。",
+      "1に近いほど新人・未経験レベル、100に近いほど業界トップクラスの熟練者レベルです。",
+      "スキルの年数・幅・職務経歴の量や深さから、100段階の中でできるだけ細かく妥当な数値を判定してください。",
+      "情報が少ない場合は控えめな数値にしてください。誇張はしないでください。",
+      "",
+      "■スキル一覧",
+      skillLines,
+      "",
+      "■職務経歴メモ",
+      experienceLines,
+    ].join("\n"),
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          level: { type: Type.INTEGER },
+          reasoning: { type: Type.STRING },
+        },
+        required: ["level", "reasoning"],
+      },
+    },
+  });
+
+  const parsed = JSON.parse(response.text ?? '{"level":1,"reasoning":""}') as SocialLevelResult;
+  return { level: Math.min(100, Math.max(1, Math.round(parsed.level))), reasoning: parsed.reasoning };
 }

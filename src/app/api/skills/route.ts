@@ -9,6 +9,7 @@ const createSkillSchema = z.object({
   category: z.enum(["skill", "experience"]).default("skill"),
   title: z.string().min(1),
   description: z.string().optional(),
+  years: z.number().min(0).max(80).optional(),
 });
 
 export async function GET() {
@@ -31,8 +32,8 @@ export async function POST(request: NextRequest) {
   );
 
   const [skill] = await query<Skill>(
-    "insert into skills (user_id, category, title, description, sort_order) values ($1, $2, $3, $4, $5) returning *",
-    [userId, body.category, body.title, body.description ?? null, count]
+    "insert into skills (user_id, category, title, description, years, sort_order) values ($1, $2, $3, $4, $5, $6) returning *",
+    [userId, body.category, body.title, body.description ?? null, body.years ?? null, count]
   );
 
   return NextResponse.json({ skill }, { status: 201 });

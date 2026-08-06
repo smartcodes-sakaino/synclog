@@ -167,8 +167,16 @@ export interface Skill {
   category: SkillCategory;
   title: string;
   description: string | null;
+  years: number | null;
   sort_order: number;
   created_at: string;
+  updated_at: string;
+}
+
+export interface UserLevel {
+  user_id: string;
+  level: number;
+  reasoning: string | null;
   updated_at: string;
 }
 

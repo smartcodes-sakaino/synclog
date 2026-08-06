@@ -8,6 +8,7 @@ const updateSkillSchema = z.object({
   category: z.enum(["skill", "experience"]).optional(),
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
+  years: z.number().min(0).max(80).nullable().optional(),
 });
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
