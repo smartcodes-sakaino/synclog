@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/apiClient";
 import type { UserLevel } from "@/types";
 
 const FALLBACK_MESSAGES = ["今日もよろしくお願いします", "調子はいかがですか？", "一緒にがんばりましょう"];
+const MESSAGE_REFRESH_INTERVAL_MS = 2 * 60 * 1000;
 
 interface Tier {
   max: number;
@@ -72,14 +73,22 @@ export default function AvatarPanel({ initialUserLevel }: { initialUserLevel: Us
   const { showToast } = useToast();
 
   useEffect(() => {
-    apiFetch<{ message: string }>("/api/mypage/companion-message", { method: "POST" })
-      .then((data) => {
-        setMessage(data.message || FALLBACK_MESSAGES[Math.floor(Math.random() * FALLBACK_MESSAGES.length)]);
-      })
-      .catch((err) => {
-        showToast(err instanceof Error ? err.message : "セリフの取得に失敗しました");
-        setMessage(FALLBACK_MESSAGES[Math.floor(Math.random() * FALLBACK_MESSAGES.length)]);
-      });
+    function loadMessage() {
+      // タブが裏に回っている間は無駄なAPI呼び出しをしない
+      if (document.visibilityState !== "visible") return;
+      apiFetch<{ message: string }>("/api/mypage/companion-message", { method: "POST" })
+        .then((data) => {
+          setMessage(data.message || FALLBACK_MESSAGES[Math.floor(Math.random() * FALLBACK_MESSAGES.length)]);
+        })
+        .catch((err) => {
+          showToast(err instanceof Error ? err.message : "セリフの取得に失敗しました");
+          setMessage(FALLBACK_MESSAGES[Math.floor(Math.random() * FALLBACK_MESSAGES.length)]);
+        });
+    }
+
+    loadMessage();
+    const intervalId = setInterval(loadMessage, MESSAGE_REFRESH_INTERVAL_MS);
+    return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
