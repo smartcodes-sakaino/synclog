@@ -44,6 +44,21 @@ async function getTomorrowContext(
   return { dueTitles: dueRows.map((r) => r.title), eventTitles };
 }
 
+// 現在時刻が、連携済みカレンダーの何らかの予定(終日予定は除く)の最中かどうかを判定する。
+// 会議中・作業中などにセリフ更新のAPI呼び出しを飛ばさないためのチェック用
+export async function isCurrentlyBusy(userId: string): Promise<boolean> {
+  const accounts = await listGoogleAccountsForUser(userId);
+  if (accounts.length === 0) return false;
+
+  const now = new Date();
+  const nowISO = now.toISOString();
+  const rangeStart = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+  const rangeEnd = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+
+  const events = await listMergedEvents(accounts, rangeStart, rangeEnd);
+  return events.some((e) => !e.allDay && e.start <= nowISO && nowISO <= e.end);
+}
+
 export async function buildCompanionMessage(userId: string): Promise<string> {
   const dateISO = todayInJST();
   const hour = currentHourInJST();
