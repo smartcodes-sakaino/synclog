@@ -149,19 +149,3 @@ body {
 .avatar-idle {
   animation: avatar-breathe 4.5s ease-in-out infinite;
 }
-
-/* 高レベル帯のアバターを彩るキラキラ演出 */
-@keyframes sparkle-twinkle {
-  0%,
-  100% {
-    opacity: 0.2;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-}
-.avatar-sparkle {
-  animation: sparkle-twinkle 1.8s ease-in-out infinite;
-}

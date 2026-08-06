@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch } from "@/lib/apiClient";
 import type { UserLevel } from "@/types";
@@ -8,19 +8,39 @@ import type { UserLevel } from "@/types";
 const FALLBACK_MESSAGES = ["今日もよろしくお願いします", "調子はいかがですか？", "一緒にがんばりましょう"];
 
 interface Tier {
+  max: number;
   name: string;
-  crown: string | null;
-  sparkle: boolean;
-  glow: string | null;
+  image: string;
 }
 
+// 10Lv刻みで見た目そのものが変わる(絵を差し替える)。段階内の滑らかさはグローで補う
+const TIERS: Tier[] = [
+  { max: 10, name: "見習い", image: "/avatar-bear.png" },
+  { max: 20, name: "新人", image: "/avatar-bear-lv20.png" },
+  { max: 30, name: "一人前", image: "/avatar-bear-lv30.png" },
+  { max: 40, name: "頼れる存在", image: "/avatar-bear-lv40.png" },
+  { max: 50, name: "ベテラン", image: "/avatar-bear-lv50.png" },
+  { max: 60, name: "エキスパート", image: "/avatar-bear-lv60.png" },
+  { max: 70, name: "プロフェッショナル", image: "/avatar-bear-lv70.png" },
+  { max: 80, name: "マスター", image: "/avatar-bear-lv80.png" },
+  { max: 90, name: "グランドマスター", image: "/avatar-bear-lv90.png" },
+  { max: 100, name: "レジェンド", image: "/avatar-bear-lv100.png" },
+];
+
 function getTier(level: number): Tier {
-  if (level >= 90) return { name: "レジェンド", crown: "👑", sparkle: true, glow: "0 0 30px rgba(255,120,190,0.85)" };
-  if (level >= 70) return { name: "マスター", crown: "👑", sparkle: true, glow: "0 0 24px rgba(255,200,87,0.8)" };
-  if (level >= 50) return { name: "エキスパート", crown: "🥈", sparkle: false, glow: "0 0 20px rgba(192,197,255,0.7)" };
-  if (level >= 30) return { name: "ベテラン", crown: "🥉", sparkle: false, glow: null };
-  if (level >= 10) return { name: "一人前", crown: null, sparkle: false, glow: null };
-  return { name: "見習い", crown: null, sparkle: false, glow: null };
+  return TIERS.find((t) => level <= t.max) ?? TIERS[TIERS.length - 1];
+}
+
+// レベルが上がるほど、絵の切り替わり(10刻み)とは別に、グローの強さも連続的に強くなっていく
+function getGlowStyle(level: number): CSSProperties | undefined {
+  if (level < 40) return undefined;
+  const intensity = Math.min(1, (level - 40) / 60);
+  const blur = Math.round(14 + intensity * 24);
+  let color: string;
+  if (level < 70) color = `rgba(192,197,255,${(0.35 + intensity * 0.3).toFixed(2)})`;
+  else if (level < 90) color = `rgba(255,200,87,${(0.45 + intensity * 0.3).toFixed(2)})`;
+  else color = `rgba(255,120,190,${(0.55 + intensity * 0.3).toFixed(2)})`;
+  return { filter: `drop-shadow(0 0 ${blur}px ${color})` };
 }
 
 export default function AvatarPanel({ initialUserLevel }: { initialUserLevel: UserLevel }) {
@@ -65,36 +85,14 @@ export default function AvatarPanel({ initialUserLevel }: { initialUserLevel: Us
         <span className="font-headline-lg text-headline-lg text-primary">Lv. {userLevel.level}</span>
       </div>
 
-      <div className="relative flex items-center justify-center">
-        {tier.crown && (
-          <span className="absolute -top-9 left-1/2 -translate-x-1/2 text-5xl z-10 select-none">{tier.crown}</span>
-        )}
-        {tier.sparkle && (
-          <>
-            <span className="avatar-sparkle absolute -top-2 -left-6 text-2xl select-none">✨</span>
-            <span
-              className="avatar-sparkle absolute top-6 -right-8 text-2xl select-none"
-              style={{ animationDelay: "0.6s" }}
-            >
-              ✨
-            </span>
-            <span
-              className="avatar-sparkle absolute bottom-2 -left-10 text-xl select-none"
-              style={{ animationDelay: "1.1s" }}
-            >
-              ✨
-            </span>
-          </>
-        )}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/avatar-bear.png"
-          alt="相棒"
-          className="avatar-idle w-72 md:w-[26rem] select-none"
-          draggable={false}
-          style={tier.glow ? { filter: `drop-shadow(${tier.glow})` } : undefined}
-        />
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={tier.image}
+        alt="相棒"
+        className="avatar-idle w-72 md:w-[26rem] select-none"
+        draggable={false}
+        style={getGlowStyle(userLevel.level)}
+      />
 
       <div className="bg-surface-container-lowest border-2 border-on-surface/80 rounded-2xl px-8 py-5 max-w-lg w-full text-center card-shadow min-h-[5rem] flex items-center justify-center">
         <p className="font-headline-md text-headline-md text-on-surface">{message ?? "…"}</p>
