@@ -135,3 +135,17 @@ body {
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
+
+/* マイページの相棒アバター用の、たまごっちくらいのゆったりした待機アニメーション */
+@keyframes avatar-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-1.5deg);
+  }
+}
+.avatar-idle {
+  animation: avatar-breathe 4.5s ease-in-out infinite;
+}

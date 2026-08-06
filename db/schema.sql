@@ -161,6 +161,19 @@ create table if not exists slack_accounts (
 );
 create index if not exists idx_slack_accounts_user on slack_accounts(user_id);
 
+-- マイページ「個人スキル」(スキル一覧・職務経歴を1テーブルでcategoryで区別する)
+create table if not exists skills (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  category text not null default 'skill' check (category in ('skill', 'experience')),
+  title text not null,
+  description text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_skills_user_category on skills(user_id, category);
+
 -- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
 -- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
 -- 将来的に閲覧専用ロール等を追加する場合に備え、防御的にRow Level Securityを有効化しておく
@@ -178,3 +191,4 @@ alter table extracted_tasks enable row level security;
 alter table routines enable row level security;
 alter table workflows enable row level security;
 alter table slack_accounts enable row level security;
+alter table skills enable row level security;

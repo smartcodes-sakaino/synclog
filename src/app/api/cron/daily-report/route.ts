@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { queryOne } from "@/lib/db";
 import { ALLOWED_LOGIN_EMAIL } from "@/lib/auth";
 import { generateDailyReport } from "@/lib/dailyReportService";
-
-function todayInJST(): string {
-  const formatter = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" });
-  return formatter.format(new Date()); // "YYYY-MM-DD"形式
-}
+import { todayInJST } from "@/lib/date";
 
 // 定時実行(Replit Scheduled Deployment)専用エンドポイント。平日17:30(JST)に呼び出される
 export async function GET(request: NextRequest) {

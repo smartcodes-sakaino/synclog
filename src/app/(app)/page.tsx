@@ -1,20 +1,22 @@
 import Header from "@/components/Header";
-import DashboardClient from "@/components/DashboardClient";
+import AvatarPanel from "@/components/AvatarPanel";
+import SkillsPanel from "@/components/SkillsPanel";
 import { getCurrentUserId } from "@/lib/auth";
-import { getTasksForUser } from "@/lib/tasksService";
-import { getTagsForUser } from "@/lib/tags";
+import { getSkillsForUser } from "@/lib/skillsService";
 
-export default async function DashboardPage() {
+export default async function MyPage() {
   const userId = await getCurrentUserId();
-  // (app)/layout.tsxで未ログイン時は既に/loginへリダイレクトされているため、ここでは必ず存在する
-  const [initialTasks, initialTags] = userId
-    ? await Promise.all([getTasksForUser(userId), getTagsForUser(userId)])
-    : [[], []];
+  const initialSkills = userId ? await getSkillsForUser(userId) : [];
 
   return (
     <>
-      <Header title="Task" />
-      <DashboardClient initialTasks={initialTasks} initialTags={initialTags} />
+      <Header title="マイページ" />
+      <div className="grid grid-cols-1 md:grid-cols-2 flex-grow">
+        <div className="border-b md:border-b-0 md:border-r border-outline-variant/20">
+          <AvatarPanel />
+        </div>
+        <SkillsPanel initialSkills={initialSkills} />
+      </div>
     </>
   );
 }

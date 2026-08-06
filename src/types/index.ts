@@ -6,6 +6,7 @@ export type DailyReportStatus = "draft_created" | "skipped" | "failed" | "pendin
 export type MinuteSourceType = "recurring" | "adhoc";
 export type ExtractedTaskStatus = "pending" | "imported" | "dismissed";
 export type RoutineStatus = "active" | "archived";
+export type SkillCategory = "skill" | "experience";
 
 export interface User {
   id: string;
@@ -156,6 +157,17 @@ export interface Workflow {
   subject: string | null;
   body: string | null;
   config: Partial<SlackCreateChannelConfig>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Skill {
+  id: string;
+  user_id: string;
+  category: SkillCategory;
+  title: string;
+  description: string | null;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

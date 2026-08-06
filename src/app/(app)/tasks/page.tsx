@@ -1,0 +1,20 @@
+import Header from "@/components/Header";
+import DashboardClient from "@/components/DashboardClient";
+import { getCurrentUserId } from "@/lib/auth";
+import { getTasksForUser } from "@/lib/tasksService";
+import { getTagsForUser } from "@/lib/tags";
+
+export default async function TasksPage() {
+  const userId = await getCurrentUserId();
+  // (app)/layout.tsxで未ログイン時は既に/loginへリダイレクトされているため、ここでは必ず存在する
+  const [initialTasks, initialTags] = userId
+    ? await Promise.all([getTasksForUser(userId), getTagsForUser(userId)])
+    : [[], []];
+
+  return (
+    <>
+      <Header title="Task" />
+      <DashboardClient initialTasks={initialTasks} initialTags={initialTags} />
+    </>
+  );
+}

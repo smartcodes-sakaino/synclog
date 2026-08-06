@@ -99,3 +99,66 @@ export async function extractTasksFromMinutes(docText: string): Promise<Extracte
 
   return JSON.parse(response.text ?? "[]") as ExtractedTaskCandidate[];
 }
+
+export interface CompanionContext {
+  timeOfDay: "morning" | "midday" | "evening" | "night";
+  dueTodayTitles: string[];
+  completedTodayTitles: string[];
+}
+
+const TIME_LABEL: Record<CompanionContext["timeOfDay"], string> = {
+  morning: "朝",
+  midday: "昼",
+  evening: "夕方",
+  night: "夜",
+};
+
+// マイページの相棒キャラクターが話す、RPGの字幕のような一言セリフを生成する
+export async function generateCompanionMessage(context: CompanionContext): Promise<string> {
+  const ai = getClient();
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      "あなたはタスク管理アプリ「SyncLog」に住む、クマの相棒キャラクターです。",
+      "ユーザーの1日に寄り添い、RPGのキャラクターのような短い一言セリフを日本語で返してください。",
+      "口調は親しみやすく前向き、敬語ではなくフランクな話し言葉。絵文字や記号、鍵括弧、名前の名乗りは付けず、セリフ本文のみを1文で返してください。25文字前後を目安にしてください。",
+      "",
+      `現在の時間帯: ${TIME_LABEL[context.timeOfDay]}`,
+      `今日が期限のタスク: ${context.dueTodayTitles.length > 0 ? context.dueTodayTitles.join("、") : "なし"}`,
+      `今日完了したタスク: ${context.completedTodayTitles.length > 0 ? context.completedTodayTitles.join("、") : "なし"}`,
+      "",
+      "優先順位: ①今日完了したタスクがあれば労いつつ、内容によってはスキル欄の更新をさりげなく提案する ②今日期限のタスクがあれば応援しつつ触れる ③どちらもなければ、時間帯に合った挨拶や気軽な雑談を話す。",
+    ].join("\n"),
+  });
+
+  return (response.text ?? "").trim();
+}
+
+// 登録済みのスキル・職務経歴メモから、職務経歴書として使える文章を整形する
+export async function generateResume(
+  skills: { title: string; description: string | null }[],
+  experience: { title: string; description: string | null }[]
+): Promise<string> {
+  const ai = getClient();
+  const skillLines =
+    skills.map((s) => `- ${s.title}${s.description ? `: ${s.description}` : ""}`).join("\n") || "(登録なし)";
+  const experienceLines =
+    experience.map((e) => `- ${e.title}${e.description ? `: ${e.description}` : ""}`).join("\n") || "(登録なし)";
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      "以下はある人物のスキル一覧と職務経歴のメモです。これをもとに、職務経歴書として使える文章を整えてください。",
+      "「スキル」セクションと「職務経歴」セクションに分け、職務経歴は簡潔な要約文にしてください。",
+      "誇張はせず、渡された情報の範囲で自然な文章に整形するだけにしてください。",
+      "",
+      "■スキル一覧",
+      skillLines,
+      "",
+      "■職務経歴メモ",
+      experienceLines,
+    ].join("\n"),
+  });
+
+  return response.text ?? "";
+}
