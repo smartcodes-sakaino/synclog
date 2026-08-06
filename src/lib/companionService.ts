@@ -12,6 +12,21 @@ function timeOfDayInJST(hour: number): CompanionContext["timeOfDay"] {
   return "night";
 }
 
+// ④(雑談枠)のテイストをランダムに切り替えるための候補。似たような褒め言葉の
+// 繰り返しにならないよう、話の種類そのものを変える
+const IDLE_MOODS = [
+  "褒める(直近の行動や継続していることを具体的に評価する)",
+  "軽い雑談(天気・季節・クマらしい豆知識など、仕事と関係ない話題)",
+  "応援・励まし(これから頑張ろうという前向きな一言)",
+  "ユーザーへの軽い問いかけ(調子や気分を尋ねるような一言)",
+  "ねぎらい(具体的な成果ではなく、日々の積み重ねそのものへの労い)",
+  "クマらしいひとりごと(のんびりした気持ちや、ふと思ったことをつぶやく)",
+];
+
+function pickIdleMood(): string {
+  return IDLE_MOODS[Math.floor(Math.random() * IDLE_MOODS.length)];
+}
+
 function addDaysToISODate(dateISO: string, days: number): string {
   const d = new Date(`${dateISO}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
@@ -92,5 +107,6 @@ export async function buildCompanionMessage(userId: string): Promise<string> {
     completedTodayTitles: completedToday.map((t) => t.title),
     tomorrowDueTitles,
     tomorrowEventTitles,
+    idleMood: pickIdleMood(),
   });
 }

@@ -106,6 +106,9 @@ export interface CompanionContext {
   completedTodayTitles: string[];
   tomorrowDueTitles: string[];
   tomorrowEventTitles: string[];
+  // ④(雑談枠)の時だけ使う、話のテイストの指定。呼び出し元でランダムに選び、
+  // 同じような当たり障りない褒め言葉ばかりにならないようにする
+  idleMood: string;
 }
 
 const TIME_LABEL: Record<CompanionContext["timeOfDay"], string> = {
@@ -134,12 +137,13 @@ export async function generateCompanionMessage(context: CompanionContext): Promi
       `今日完了したタスク: ${listOrNone(context.completedTodayTitles)}`,
       `明日が期限のタスク: ${listOrNone(context.tomorrowDueTitles)}`,
       `明日の予定: ${listOrNone(context.tomorrowEventTitles)}`,
+      `④に該当する場合の話のテイスト指定: ${context.idleMood}`,
       "",
       "優先順位:",
       "①今日完了したタスクがあれば労いつつ、内容によってはスキル欄の更新をさりげなく提案する",
       "②今日期限のタスクがあれば応援しつつ触れる",
       "③明日が期限のタスクや明日の予定の情報がある場合(定時前の時間帯のみ渡されます)は、それとなく明日の準備を促す一言を話す",
-      "④どれにも当てはまらなければ、時間帯に合った挨拶や気軽な雑談に加えて、日頃の頑張りをさりげなく褒める一言を話す(同じ褒め方の繰り返しにならないよう、毎回違う切り口にする)。",
+      "④どれにも当てはまらなければ、上で指定された「話のテイスト」に沿った一言を話す。指定が変わるたびに、褒め言葉・雑談・質問・励ましなど話の種類そのものが切り替わるようにし、表現を変えただけの似たような一言にならないようにする。",
     ].join("\n"),
   });
 
