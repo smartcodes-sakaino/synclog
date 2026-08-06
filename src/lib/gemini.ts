@@ -104,6 +104,8 @@ export interface CompanionContext {
   timeOfDay: "morning" | "midday" | "evening" | "night";
   dueTodayTitles: string[];
   completedTodayTitles: string[];
+  tomorrowDueTitles: string[];
+  tomorrowEventTitles: string[];
 }
 
 const TIME_LABEL: Record<CompanionContext["timeOfDay"], string> = {
@@ -112,6 +114,10 @@ const TIME_LABEL: Record<CompanionContext["timeOfDay"], string> = {
   evening: "夕方",
   night: "夜",
 };
+
+function listOrNone(items: string[]): string {
+  return items.length > 0 ? items.join("、") : "なし";
+}
 
 // マイページの相棒キャラクターが話す、RPGの字幕のような一言セリフを生成する
 export async function generateCompanionMessage(context: CompanionContext): Promise<string> {
@@ -124,10 +130,16 @@ export async function generateCompanionMessage(context: CompanionContext): Promi
       "口調は親しみやすく前向きな敬語(です・ます調)。絵文字や記号、鍵括弧、名前の名乗りは付けず、セリフ本文のみを1文で返してください。25〜35文字程度を目安にしてください。",
       "",
       `現在の時間帯: ${TIME_LABEL[context.timeOfDay]}`,
-      `今日が期限のタスク: ${context.dueTodayTitles.length > 0 ? context.dueTodayTitles.join("、") : "なし"}`,
-      `今日完了したタスク: ${context.completedTodayTitles.length > 0 ? context.completedTodayTitles.join("、") : "なし"}`,
+      `今日が期限のタスク: ${listOrNone(context.dueTodayTitles)}`,
+      `今日完了したタスク: ${listOrNone(context.completedTodayTitles)}`,
+      `明日が期限のタスク: ${listOrNone(context.tomorrowDueTitles)}`,
+      `明日の予定: ${listOrNone(context.tomorrowEventTitles)}`,
       "",
-      "優先順位: ①今日完了したタスクがあれば労いつつ、内容によってはスキル欄の更新をさりげなく提案する ②今日期限のタスクがあれば応援しつつ触れる ③どちらもなければ、時間帯に合った挨拶や気軽な雑談を話す。",
+      "優先順位:",
+      "①今日完了したタスクがあれば労いつつ、内容によってはスキル欄の更新をさりげなく提案する",
+      "②今日期限のタスクがあれば応援しつつ触れる",
+      "③明日が期限のタスクや明日の予定の情報がある場合(定時前の時間帯のみ渡されます)は、それとなく明日の準備を促す一言を話す",
+      "④どれにも当てはまらなければ、時間帯に合った挨拶や気軽な雑談に加えて、日頃の頑張りをさりげなく褒める一言を話す(同じ褒め方の繰り返しにならないよう、毎回違う切り口にする)。",
     ].join("\n"),
   });
 
