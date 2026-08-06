@@ -101,6 +101,12 @@ export async function buildCompanionMessage(userId: string): Promise<string> {
     tomorrowEventTitles = tomorrow.eventTitles;
   }
 
+  // タスク関連の情報があっても、毎回それだけを話すと同じ話題の繰り返しになるため、
+  // 45%の確率でのみ今回はタスクの話題にする(残りは雑談枠のテイストに任せる)
+  const hasNotableInfo =
+    dueToday.length > 0 || completedToday.length > 0 || tomorrowDueTitles.length > 0 || tomorrowEventTitles.length > 0;
+  const focusOnUpdates = hasNotableInfo && Math.random() < 0.45;
+
   return generateCompanionMessage({
     timeOfDay: timeOfDayInJST(hour),
     dueTodayTitles: dueToday.map((t) => t.title),
@@ -108,5 +114,6 @@ export async function buildCompanionMessage(userId: string): Promise<string> {
     tomorrowDueTitles,
     tomorrowEventTitles,
     idleMood: pickIdleMood(),
+    focusOnUpdates,
   });
 }
