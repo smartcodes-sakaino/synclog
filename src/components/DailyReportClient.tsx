@@ -25,6 +25,7 @@ export default function DailyReportClient() {
   const [sending, setSending] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const { showToast } = useToast();
 
   async function load() {
@@ -41,6 +42,8 @@ export default function DailyReportClient() {
       setHistory(data.history ?? []);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "日報プレビューの取得に失敗しました");
+    } finally {
+      setLoaded(true);
     }
   }
 
@@ -48,6 +51,22 @@ export default function DailyReportClient() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 「報告事項・コメント」は下書き作成を待たず、入力が止まったら自動的にその日の分として保存する
+  // (画面遷移しても消えないように)
+  useEffect(() => {
+    if (!loaded) return;
+    const timer = setTimeout(() => {
+      apiFetch("/api/daily-report", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: today, comment }),
+      }).catch((err) => {
+        showToast(err instanceof Error ? err.message : "コメントの自動保存に失敗しました");
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [comment, loaded, today, showToast]);
 
   // コメントや作業項目の編集がその場でプレビューに反映されるよう、送信前にクライアント側で組み立てる
   const body = useMemo(

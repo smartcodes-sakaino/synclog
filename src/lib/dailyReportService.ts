@@ -124,6 +124,17 @@ async function upsertDailyReport(row: {
   return report;
 }
 
+// 「報告事項・コメント」欄の入力を、Gmail下書き作成を待たずにその場で保存する(自動保存用)。
+// status等の他の列には触れず、comment だけを更新する
+export async function saveDailyReportComment(userId: string, dateISO: string, comment: string): Promise<void> {
+  await query(
+    `insert into daily_reports (user_id, report_date, comment)
+     values ($1, $2, $3)
+     on conflict (user_id, report_date) do update set comment = excluded.comment`,
+    [userId, dateISO, comment]
+  );
+}
+
 export async function generateDailyReport(
   userId: string,
   dateISO: string,
