@@ -112,6 +112,9 @@ export interface CompanionContext {
   // タスク関連の情報(①〜③)が実際にあっても、毎回それだけを話すと同じ話題の
   // 繰り返しになるため、呼び出し元が確率で「今回はタスクの話題にするか」を決めて渡す
   focusOnUpdates: boolean;
+  // マイページに設定されている今期の目標(未設定ならnull)。④の褒め/励まし系のテイストの時、
+  // 参考程度に絡めてもよい(毎回言及すると聞き飽きるので、あくまで一つの材料として)
+  goalContent: string | null;
 }
 
 const TIME_LABEL: Record<CompanionContext["timeOfDay"], string> = {
@@ -142,6 +145,7 @@ export async function generateCompanionMessage(context: CompanionContext): Promi
       `明日の予定: ${listOrNone(context.tomorrowEventTitles)}`,
       `今回タスクの話題にするか: ${context.focusOnUpdates ? "はい" : "いいえ"}`,
       `④に該当する場合の話のテイスト指定: ${context.idleMood}`,
+      `今期の目標: ${context.goalContent ?? "未設定"}`,
       "",
       "優先順位:",
       "「今回タスクの話題にするか」が「はい」の場合のみ、以下①〜③を順に検討する:",
@@ -151,6 +155,7 @@ export async function generateCompanionMessage(context: CompanionContext): Promi
       "「今回タスクの話題にするか」が「いいえ」の場合、または①〜③に該当する情報が何も無い場合は、",
       "④指定された「話のテイスト」に沿った一言を話す。指定が変わるたびに、褒め言葉・雑談・質問・励ましなど話の種類そのものが切り替わるようにし、表現を変えただけの似たような一言にならないようにする。",
       "タスクの情報があっても「今回タスクの話題にするか」が「いいえ」なら、タスクの話は一切せず④のテイストだけで話すこと(同じ話題を毎回繰り返さないため)。",
+      "今期の目標が設定されていて、かつ④のテイストが「褒める」「応援・励まし」「ねぎらい」のいずれかの場合に限り、目標にさりげなく触れてもよい(必須ではない。毎回触れると聞き飽きるので、たまに絡める程度にする)。",
     ].join("\n"),
   });
 

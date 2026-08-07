@@ -180,6 +180,14 @@ export interface UserLevel {
   updated_at: string;
 }
 
+export interface Goal {
+  user_id: string;
+  content: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  updated_at: string;
+}
+
 export interface CalendarEvent {
   id: string;
   accountEmail: string;

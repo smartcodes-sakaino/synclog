@@ -3,6 +3,7 @@ import { generateCompanionMessage } from "@/lib/gemini";
 import { todayInJST, currentHourInJST } from "@/lib/date";
 import { listGoogleAccountsForUser } from "@/lib/googleAccounts";
 import { listMergedEvents } from "@/lib/google/calendar";
+import { getGoal } from "@/lib/goalService";
 import type { CompanionContext } from "@/lib/gemini";
 
 function timeOfDayInJST(hour: number): CompanionContext["timeOfDay"] {
@@ -80,7 +81,7 @@ export async function buildCompanionMessage(userId: string): Promise<string> {
   const start = `${dateISO}T00:00:00+09:00`;
   const end = `${dateISO}T23:59:59+09:00`;
 
-  const [dueToday, completedToday] = await Promise.all([
+  const [dueToday, completedToday, goal] = await Promise.all([
     query<{ title: string }>(
       "select title from tasks where user_id = $1 and due_date = $2 and status != 'done'",
       [userId, dateISO]
@@ -89,6 +90,7 @@ export async function buildCompanionMessage(userId: string): Promise<string> {
       "select title from tasks where user_id = $1 and status = 'done' and completed_at >= $2 and completed_at <= $3",
       [userId, start, end]
     ),
+    getGoal(userId),
   ]);
 
   // 定時(18時)が近い夕方の時間帯だけ、明日の予定・タスクも取得して声かけの材料にする
@@ -115,5 +117,6 @@ export async function buildCompanionMessage(userId: string): Promise<string> {
     tomorrowEventTitles,
     idleMood: pickIdleMood(),
     focusOnUpdates,
+    goalContent: goal.content,
   });
 }

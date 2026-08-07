@@ -184,6 +184,15 @@ create table if not exists user_levels (
   updated_at timestamptz not null default now()
 );
 
+-- マイページ「半年目標」(現在の目標1件のみ保持。期間はReviewの初期値としても使う)
+create table if not exists goals (
+  user_id uuid primary key references users(id) on delete cascade,
+  content text,
+  period_start date,
+  period_end date,
+  updated_at timestamptz not null default now()
+);
+
 -- DBへの唯一の経路はNext.jsサーバー(DATABASE_URLを保持するテーブル所有ロール)経由のみで、
 -- ブラウザや他のロールから直接クエリを投げる経路は存在しない。
 -- 将来的に閲覧専用ロール等を追加する場合に備え、防御的にRow Level Securityを有効化しておく
@@ -203,3 +212,4 @@ alter table workflows enable row level security;
 alter table slack_accounts enable row level security;
 alter table skills enable row level security;
 alter table user_levels enable row level security;
+alter table goals enable row level security;

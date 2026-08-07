@@ -8,9 +8,16 @@ import type { ReviewSummary } from "@/types";
 
 const BAR_COLORS = ["bg-primary", "bg-secondary", "bg-tertiary", "bg-outline"];
 
-export default function ReviewClient() {
-  const [periodStart, setPeriodStart] = useState(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
-  const [periodEnd, setPeriodEnd] = useState(format(new Date(), "yyyy-MM-dd"));
+export default function ReviewClient({
+  initialPeriodStart,
+  initialPeriodEnd,
+}: {
+  initialPeriodStart: string | null;
+  initialPeriodEnd: string | null;
+}) {
+  // 半年目標(マイページ)に期間が設定されていればそれを初期値にする。無ければ従来通り直近6ヶ月
+  const [periodStart, setPeriodStart] = useState(initialPeriodStart ?? format(subMonths(new Date(), 6), "yyyy-MM-dd"));
+  const [periodEnd, setPeriodEnd] = useState(initialPeriodEnd ?? format(new Date(), "yyyy-MM-dd"));
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
