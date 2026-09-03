@@ -69,7 +69,7 @@ export default function TaskDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl p-6 w-full max-w-lg card-shadow max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-2xl p-6 w-full max-w-3xl card-shadow max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
@@ -94,8 +94,8 @@ export default function TaskDetailModal({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 resize-none"
+              rows={10}
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 resize-y"
             />
           </div>
 
