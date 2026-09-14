@@ -5,7 +5,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import type { Workflow } from "@/types";
 
 const updateWorkflowSchema = z.object({
-  kind: z.enum(["gmail_draft", "slack_create_channel"]).optional(),
+  kind: z.enum(["gmail_draft", "slack_create_channel", "train_delay"]).optional(),
   title: z.string().min(1).optional(),
   to_emails: z.string().nullable().optional(),
   subject: z.string().nullable().optional(),

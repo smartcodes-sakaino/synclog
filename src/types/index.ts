@@ -139,7 +139,7 @@ export interface SlackAccount {
   created_at: string;
 }
 
-export type WorkflowKind = "gmail_draft" | "slack_create_channel";
+export type WorkflowKind = "gmail_draft" | "slack_create_channel" | "train_delay";
 
 export interface SlackCreateChannelConfig {
   workspaceId: string;

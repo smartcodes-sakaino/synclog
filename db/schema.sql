@@ -135,7 +135,7 @@ create index if not exists idx_routines_user_status on routines(user_id, status)
 create table if not exists workflows (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
-  kind text not null default 'gmail_draft' check (kind in ('gmail_draft', 'slack_create_channel')),
+  kind text not null default 'gmail_draft' check (kind in ('gmail_draft', 'slack_create_channel', 'train_delay')),
   title text not null,
   to_emails text,
   subject text,

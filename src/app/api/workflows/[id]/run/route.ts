@@ -6,6 +6,7 @@ import { getPrimaryGoogleAccount } from "@/lib/googleAccounts";
 import { createGmailDraft } from "@/lib/google/gmail";
 import { getSlackAccountForWorkspace } from "@/lib/slackAccounts";
 import { createSlackChannel, inviteToSlackChannel } from "@/lib/slack/conversations";
+import { buildDelayCertificateUrl, buildTrainDelayFormUrl } from "@/lib/trainDelayWorkflow";
 import type { SlackCreateChannelConfig, Workflow } from "@/types";
 
 const runSchema = z.object({ channelName: z.string().optional() });
@@ -25,6 +26,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = runSchema.parse(await request.json().catch(() => ({})));
 
   try {
+    if (workflow.kind === "train_delay") {
+      return NextResponse.json({
+        delayCertificateUrl: buildDelayCertificateUrl(),
+        formUrl: buildTrainDelayFormUrl(),
+      });
+    }
+
     if (workflow.kind === "slack_create_channel") {
       const config = workflow.config as Partial<SlackCreateChannelConfig>;
       const channelName = body.channelName?.trim() || config.channelNameTemplate;

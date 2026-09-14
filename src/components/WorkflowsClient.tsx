@@ -16,7 +16,14 @@ const CARD_STYLES = [
 const KIND_LABEL: Record<Workflow["kind"], { icon: string; button: string }> = {
   gmail_draft: { icon: "mail", button: "下書きを作成" },
   slack_create_channel: { icon: "tag", button: "チャンネルを作成" },
+  train_delay: { icon: "train", button: "申請リンクを開く" },
 };
+
+function describeWorkflow(workflow: Workflow): string {
+  if (workflow.kind === "gmail_draft") return `宛先: ${workflow.to_emails}`;
+  if (workflow.kind === "slack_create_channel") return "Slackチャンネル作成+招待";
+  return "遅延証明書ページ+申請フォームを開く";
+}
 
 export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows: Workflow[] }) {
   const [workflows, setWorkflows] = useState<Workflow[]>(initialWorkflows);
@@ -47,9 +54,28 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
     }
   }
 
+  async function runTrainDelay(workflow: Workflow) {
+    setRunningId(workflow.id);
+    try {
+      const data = await apiFetch<{ delayCertificateUrl: string; formUrl: string }>(
+        `/api/workflows/${workflow.id}/run`,
+        { method: "POST" }
+      );
+      window.open(data.delayCertificateUrl, "_blank", "noopener,noreferrer");
+      window.open(data.formUrl, "_blank", "noopener,noreferrer");
+      showToast(`「${workflow.title}」を開きました`, "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "実行に失敗しました");
+    } finally {
+      setRunningId(null);
+    }
+  }
+
   function handleRunClick(workflow: Workflow) {
     if (workflow.kind === "slack_create_channel") {
       setRunning(workflow);
+    } else if (workflow.kind === "train_delay") {
+      runTrainDelay(workflow);
     } else {
       runGmailDraft(workflow);
     }
@@ -88,16 +114,14 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
                 <span className="material-symbols-outlined text-[18px]">edit</span>
               </button>
             </div>
-            <p className="text-xs text-on-surface-variant/70 truncate">
-              {workflow.kind === "gmail_draft" ? `宛先: ${workflow.to_emails}` : "Slackチャンネル作成+招待"}
-            </p>
+            <p className="text-xs text-on-surface-variant/70 truncate">{describeWorkflow(workflow)}</p>
             <button
               onClick={() => handleRunClick(workflow)}
               disabled={runningId === workflow.id}
               className="bg-surface/70 hover:bg-surface rounded-lg py-2 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">{KIND_LABEL[workflow.kind].icon}</span>
-              {runningId === workflow.id ? "作成中..." : KIND_LABEL[workflow.kind].button}
+              {runningId === workflow.id ? "実行中..." : KIND_LABEL[workflow.kind].button}
             </button>
           </div>
         ))}

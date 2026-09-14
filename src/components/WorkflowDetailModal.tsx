@@ -45,7 +45,9 @@ export default function WorkflowDetailModal(props: Props) {
     title.trim() !== "" &&
     (kind === "gmail_draft"
       ? toEmails.trim() !== "" && subject.trim() !== "" && body.trim() !== ""
-      : workspaceId !== "" && channelNameTemplate.trim() !== "");
+      : kind === "slack_create_channel"
+        ? workspaceId !== "" && channelNameTemplate.trim() !== ""
+        : true);
 
   async function handleSave() {
     if (!isValid) return;
@@ -54,22 +56,24 @@ export default function WorkflowDetailModal(props: Props) {
       const payload =
         kind === "gmail_draft"
           ? { kind, title, to_emails: toEmails, subject, body, config: {} }
-          : {
-              kind,
-              title,
-              to_emails: null,
-              subject: null,
-              body: null,
-              config: {
-                workspaceId,
-                channelNameTemplate,
-                visibility,
-                inviteUserIds: inviteUserIds
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              },
-            };
+          : kind === "slack_create_channel"
+            ? {
+                kind,
+                title,
+                to_emails: null,
+                subject: null,
+                body: null,
+                config: {
+                  workspaceId,
+                  channelNameTemplate,
+                  visibility,
+                  inviteUserIds: inviteUserIds
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                },
+              }
+            : { kind, title, to_emails: null, subject: null, body: null, config: {} };
       if (isEdit) {
         await apiFetch(`/api/workflows/${props.workflow.id}`, {
           method: "PATCH",
@@ -133,6 +137,12 @@ export default function WorkflowDetailModal(props: Props) {
               >
                 Slackチャンネル作成
               </button>
+              <button
+                onClick={() => setKind("train_delay")}
+                className={`px-4 py-2 rounded-full text-sm font-bold ${kind === "train_delay" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant"}`}
+              >
+                電車遅延申請
+              </button>
             </div>
           </div>
 
@@ -146,7 +156,11 @@ export default function WorkflowDetailModal(props: Props) {
             />
           </div>
 
-          {kind === "gmail_draft" ? (
+          {kind === "train_delay" ? (
+            <p className="text-xs text-on-surface-variant">
+              実行すると、JR東日本の遅延証明書ページと、内容を事前入力済みのタイムカード更新依頼フォームが新しいタブで開きます(値は固定で設定変更はできません)
+            </p>
+          ) : kind === "gmail_draft" ? (
             <>
               <div>
                 <label className="block text-label-sm text-on-surface-variant mb-1">宛先</label>

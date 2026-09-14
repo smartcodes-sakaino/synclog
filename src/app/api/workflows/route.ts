@@ -6,7 +6,7 @@ import { getWorkflowsForUser } from "@/lib/workflowsService";
 import type { Workflow } from "@/types";
 
 const createWorkflowSchema = z.object({
-  kind: z.enum(["gmail_draft", "slack_create_channel"]).default("gmail_draft"),
+  kind: z.enum(["gmail_draft", "slack_create_channel", "train_delay"]).default("gmail_draft"),
   title: z.string().min(1),
   to_emails: z.string().optional(),
   subject: z.string().optional(),
