@@ -158,7 +158,7 @@ export default function WorkflowDetailModal(props: Props) {
 
           {kind === "train_delay" ? (
             <p className="text-xs text-on-surface-variant">
-              実行すると、JR東日本の遅延証明書ページと、内容を事前入力済みのタイムカード更新依頼フォームが新しいタブで開きます(値は固定で設定変更はできません)
+              実行すると、遅延証明書URLを含めて内容を事前入力済みのタイムカード更新依頼フォームが新しいタブで開きます(値は固定で設定変更はできません)
             </p>
           ) : kind === "gmail_draft" ? (
             <>

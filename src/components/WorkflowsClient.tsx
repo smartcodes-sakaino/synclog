@@ -16,13 +16,13 @@ const CARD_STYLES = [
 const KIND_LABEL: Record<Workflow["kind"], { icon: string; button: string }> = {
   gmail_draft: { icon: "mail", button: "下書きを作成" },
   slack_create_channel: { icon: "tag", button: "チャンネルを作成" },
-  train_delay: { icon: "train", button: "申請リンクを開く" },
+  train_delay: { icon: "train", button: "申請フォームを開く" },
 };
 
 function describeWorkflow(workflow: Workflow): string {
   if (workflow.kind === "gmail_draft") return `宛先: ${workflow.to_emails}`;
   if (workflow.kind === "slack_create_channel") return "Slackチャンネル作成+招待";
-  return "遅延証明書ページ+申請フォームを開く";
+  return "遅延証明書URLを事前入力済みの申請フォームを開く";
 }
 
 export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows: Workflow[] }) {
@@ -57,11 +57,9 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
   async function runTrainDelay(workflow: Workflow) {
     setRunningId(workflow.id);
     try {
-      const data = await apiFetch<{ delayCertificateUrl: string; formUrl: string }>(
-        `/api/workflows/${workflow.id}/run`,
-        { method: "POST" }
-      );
-      window.open(data.delayCertificateUrl, "_blank", "noopener,noreferrer");
+      const data = await apiFetch<{ formUrl: string }>(`/api/workflows/${workflow.id}/run`, {
+        method: "POST",
+      });
       window.open(data.formUrl, "_blank", "noopener,noreferrer");
       showToast(`「${workflow.title}」を開きました`, "success");
     } catch (err) {
