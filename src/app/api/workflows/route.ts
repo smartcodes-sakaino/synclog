@@ -8,9 +8,9 @@ import type { Workflow } from "@/types";
 const createWorkflowSchema = z.object({
   kind: z.enum(["gmail_draft", "slack_create_channel", "train_delay"]).default("gmail_draft"),
   title: z.string().min(1),
-  to_emails: z.string().optional(),
-  subject: z.string().optional(),
-  body: z.string().optional(),
+  to_emails: z.string().nullable().optional(),
+  subject: z.string().nullable().optional(),
+  body: z.string().nullable().optional(),
   config: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
@@ -26,22 +26,27 @@ export async function POST(request: NextRequest) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const body = createWorkflowSchema.parse(await request.json());
+  try {
+    const body = createWorkflowSchema.parse(await request.json());
 
-  const [workflow] = await query<Workflow>(
-    `insert into workflows (user_id, kind, title, to_emails, subject, body, config)
-     values ($1, $2, $3, $4, $5, $6, $7::jsonb)
-     returning *`,
-    [
-      userId,
-      body.kind,
-      body.title,
-      body.to_emails ?? null,
-      body.subject ?? null,
-      body.body ?? null,
-      JSON.stringify(body.config),
-    ]
-  );
+    const [workflow] = await query<Workflow>(
+      `insert into workflows (user_id, kind, title, to_emails, subject, body, config)
+       values ($1, $2, $3, $4, $5, $6, $7::jsonb)
+       returning *`,
+      [
+        userId,
+        body.kind,
+        body.title,
+        body.to_emails ?? null,
+        body.subject ?? null,
+        body.body ?? null,
+        JSON.stringify(body.config),
+      ]
+    );
 
-  return NextResponse.json({ workflow }, { status: 201 });
+    return NextResponse.json({ workflow }, { status: 201 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "作成に失敗しました";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
