@@ -33,8 +33,9 @@ const HAS_COMMUTER_PASS = "いいえ";
 const FARE = "440";
 const FARE_CHANGED = "いいえ";
 
-// カレンダー予定の「場所」にこの文字列が入っている日を出社日とみなす
-const OFFICE_LOCATION = "02_東京本社";
+// 勤務地は予定の「場所」欄ではなく、終日予定のタイトルとして
+// 「02_東京本社 (オフィス)」のように入力されているため、これで判定する
+const OFFICE_MARKER = "02_東京本社";
 
 function stripQuery(url: string): string {
   return url.split("?")[0];
@@ -70,19 +71,11 @@ export async function getOfficeAttendanceDays(userId: string): Promise<number[]>
 
   const days = new Set<number>();
   for (const event of events) {
-    if ((event.location ?? "").trim() === OFFICE_LOCATION) {
+    if (event.allDay && event.title.trim().startsWith(OFFICE_MARKER)) {
       days.add(dayOfMonthJST(event));
     }
   }
   return [...days].sort((a, b) => a - b);
-}
-
-// 出社日が0件のときの原因調査用。今月のイベントの場所欄をそのまま返す
-export async function debugMonthlyEventLocations(
-  userId: string
-): Promise<{ title: string; location: string | null; allDay: boolean; start: string }[]> {
-  const events = await fetchCurrentMonthEvents(userId);
-  return events.map((e) => ({ title: e.title, location: e.location, allDay: e.allDay, start: e.start }));
 }
 
 export async function buildCommuteExpenseFormUrl(userId: string, formBaseUrl: string): Promise<string> {
