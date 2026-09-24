@@ -7,7 +7,7 @@ import { createGmailDraft } from "@/lib/google/gmail";
 import { getSlackAccountForWorkspace } from "@/lib/slackAccounts";
 import { createSlackChannel, inviteToSlackChannel } from "@/lib/slack/conversations";
 import { buildTrainDelayFormUrl } from "@/lib/trainDelayWorkflow";
-import { buildCommuteExpenseFormUrl } from "@/lib/commuteExpenseWorkflow";
+import { buildCommuteExpenseFormUrl, debugMonthlyEventLocations } from "@/lib/commuteExpenseWorkflow";
 import type { CommuteExpenseConfig, SlackCreateChannelConfig, Workflow } from "@/types";
 
 const runSchema = z.object({ channelName: z.string().optional() });
@@ -37,7 +37,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "フォームURLを設定してください" }, { status: 400 });
       }
       const formUrl = await buildCommuteExpenseFormUrl(userId, config.formBaseUrl);
-      return NextResponse.json({ formUrl });
+      // TODO: 出社日の判定条件が固まったらdebugEventsは削除する
+      const debugEvents = await debugMonthlyEventLocations(userId);
+      return NextResponse.json({ formUrl, debugEvents });
     }
 
     if (workflow.kind === "slack_create_channel") {

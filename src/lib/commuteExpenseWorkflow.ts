@@ -47,8 +47,7 @@ function dayOfMonthJST(event: CalendarEvent): number {
   return Number(dateOnly.split("-")[2]);
 }
 
-// 今月のカレンダー予定から、勤務地が「02_東京本社」になっている日(出社日)を取得する
-export async function getOfficeAttendanceDays(userId: string): Promise<number[]> {
+async function fetchCurrentMonthEvents(userId: string): Promise<CalendarEvent[]> {
   const { year, month } = currentYearMonthJST();
   const monthStr = String(month).padStart(2, "0");
   const nextMonth = month === 12 ? 1 : month + 1;
@@ -58,11 +57,16 @@ export async function getOfficeAttendanceDays(userId: string): Promise<number[]>
   const accounts = await listGoogleAccountsForUser(userId);
   if (accounts.length === 0) return [];
 
-  const events = await listMergedEvents(
+  return listMergedEvents(
     accounts,
     `${year}-${monthStr}-01T00:00:00+09:00`,
     `${nextYear}-${nextMonthStr}-01T00:00:00+09:00`
   );
+}
+
+// 今月のカレンダー予定から、勤務地が「02_東京本社」になっている日(出社日)を取得する
+export async function getOfficeAttendanceDays(userId: string): Promise<number[]> {
+  const events = await fetchCurrentMonthEvents(userId);
 
   const days = new Set<number>();
   for (const event of events) {
@@ -71,6 +75,14 @@ export async function getOfficeAttendanceDays(userId: string): Promise<number[]>
     }
   }
   return [...days].sort((a, b) => a - b);
+}
+
+// 出社日が0件のときの原因調査用。今月のイベントの場所欄をそのまま返す
+export async function debugMonthlyEventLocations(
+  userId: string
+): Promise<{ title: string; location: string | null; allDay: boolean; start: string }[]> {
+  const events = await fetchCurrentMonthEvents(userId);
+  return events.map((e) => ({ title: e.title, location: e.location, allDay: e.allDay, start: e.start }));
 }
 
 export async function buildCommuteExpenseFormUrl(userId: string, formBaseUrl: string): Promise<string> {
