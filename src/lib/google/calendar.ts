@@ -39,6 +39,7 @@ export async function listMergedEvents(
             end: event.end?.dateTime ?? event.end?.date ?? "",
             allDay: !event.start?.dateTime,
             description: event.description ?? null,
+            location: event.location ?? null,
             meetUrl: event.hangoutLink ?? null,
           },
         ];

@@ -17,11 +17,13 @@ const KIND_LABEL: Record<Workflow["kind"], { icon: string; button: string }> = {
   gmail_draft: { icon: "mail", button: "下書きを作成" },
   slack_create_channel: { icon: "tag", button: "チャンネルを作成" },
   train_delay: { icon: "train", button: "申請フォームを開く" },
+  commute_expense: { icon: "directions_transit", button: "申請フォームを開く" },
 };
 
 function describeWorkflow(workflow: Workflow): string {
   if (workflow.kind === "gmail_draft") return `宛先: ${workflow.to_emails}`;
   if (workflow.kind === "slack_create_channel") return "Slackチャンネル作成+招待";
+  if (workflow.kind === "commute_expense") return "今月の出社日を集計して申請フォームを開く";
   return "遅延証明書URLを事前入力済みの申請フォームを開く";
 }
 
@@ -54,7 +56,7 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
     }
   }
 
-  async function runTrainDelay(workflow: Workflow) {
+  async function runOpenFormUrl(workflow: Workflow) {
     setRunningId(workflow.id);
     try {
       const data = await apiFetch<{ formUrl: string }>(`/api/workflows/${workflow.id}/run`, {
@@ -72,8 +74,8 @@ export default function WorkflowsClient({ initialWorkflows }: { initialWorkflows
   function handleRunClick(workflow: Workflow) {
     if (workflow.kind === "slack_create_channel") {
       setRunning(workflow);
-    } else if (workflow.kind === "train_delay") {
-      runTrainDelay(workflow);
+    } else if (workflow.kind === "train_delay" || workflow.kind === "commute_expense") {
+      runOpenFormUrl(workflow);
     } else {
       runGmailDraft(workflow);
     }

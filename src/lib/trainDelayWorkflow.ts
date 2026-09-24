@@ -1,3 +1,5 @@
+import { todayJST } from "@/lib/jstDate";
+
 const GOOGLE_FORM_BASE_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSeEITvmvYlIrhocl36-uyuQN6SSuxh6sUOCwN5mOPV3jEPsWw/viewform";
 
@@ -24,12 +26,6 @@ const REASON = "電車遅延";
 // 埼京線・7時〜10時帯(JR東日本 運行情報サイトのURLパターンから確認済み)
 const JR_LINE_CODE = "09";
 const JR_TIME_BAND = "02";
-
-// サーバーのシステムタイムゾーンに依存せず日本時間の「今日」を取得する
-// (dailyReportTemplate.tsと同じく、Date経由だとVercelのUTC実行環境で日付がずれるため)
-export function todayJST(): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
-}
 
 export function buildDelayCertificateUrl(dateISO: string = todayJST()): string {
   const yyyymmdd = dateISO.replace(/-/g, "");

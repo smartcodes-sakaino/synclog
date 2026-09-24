@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch } from "@/lib/apiClient";
-import type { SlackAccount, SlackCreateChannelConfig, Workflow, WorkflowKind } from "@/types";
+import type { CommuteExpenseConfig, SlackAccount, SlackCreateChannelConfig, Workflow, WorkflowKind } from "@/types";
 
 type Props =
   | { mode: "create"; onClose: () => void; onSaved: () => void }
@@ -12,7 +12,7 @@ type Props =
 export default function WorkflowDetailModal(props: Props) {
   const isEdit = props.mode === "edit";
   const initial = isEdit ? props.workflow : null;
-  const initialConfig = (initial?.config ?? {}) as Partial<SlackCreateChannelConfig>;
+  const initialConfig = (initial?.config ?? {}) as Partial<SlackCreateChannelConfig> & Partial<CommuteExpenseConfig>;
 
   const [kind, setKind] = useState<WorkflowKind>(initial?.kind ?? "gmail_draft");
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -25,6 +25,8 @@ export default function WorkflowDetailModal(props: Props) {
   const [channelNameTemplate, setChannelNameTemplate] = useState(initialConfig.channelNameTemplate ?? "");
   const [visibility, setVisibility] = useState<"private" | "public">(initialConfig.visibility ?? "private");
   const [inviteUserIds, setInviteUserIds] = useState((initialConfig.inviteUserIds ?? []).join(", "));
+
+  const [formBaseUrl, setFormBaseUrl] = useState(initialConfig.formBaseUrl ?? "");
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -47,7 +49,9 @@ export default function WorkflowDetailModal(props: Props) {
       ? toEmails.trim() !== "" && subject.trim() !== "" && body.trim() !== ""
       : kind === "slack_create_channel"
         ? workspaceId !== "" && channelNameTemplate.trim() !== ""
-        : true);
+        : kind === "commute_expense"
+          ? formBaseUrl.trim() !== ""
+          : true);
 
   async function handleSave() {
     if (!isValid) return;
@@ -73,7 +77,9 @@ export default function WorkflowDetailModal(props: Props) {
                     .filter(Boolean),
                 },
               }
-            : { kind, title, to_emails: null, subject: null, body: null, config: {} };
+            : kind === "commute_expense"
+              ? { kind, title, to_emails: null, subject: null, body: null, config: { formBaseUrl: formBaseUrl.trim() } }
+              : { kind, title, to_emails: null, subject: null, body: null, config: {} };
       if (isEdit) {
         await apiFetch(`/api/workflows/${props.workflow.id}`, {
           method: "PATCH",
@@ -143,6 +149,12 @@ export default function WorkflowDetailModal(props: Props) {
               >
                 電車遅延申請
               </button>
+              <button
+                onClick={() => setKind("commute_expense")}
+                className={`px-4 py-2 rounded-full text-sm font-bold ${kind === "commute_expense" ? "bg-primary text-on-primary" : "bg-surface-container text-on-surface-variant"}`}
+              >
+                通勤交通費申請
+              </button>
             </div>
           </div>
 
@@ -160,6 +172,25 @@ export default function WorkflowDetailModal(props: Props) {
             <p className="text-xs text-on-surface-variant">
               実行すると、遅延証明書URLを含めて内容を事前入力済みのタイムカード更新依頼フォームが新しいタブで開きます(値は固定で設定変更はできません)
             </p>
+          ) : kind === "commute_expense" ? (
+            <>
+              <div>
+                <label className="block text-label-sm text-on-surface-variant mb-1">フォームURL</label>
+                <input
+                  value={formBaseUrl}
+                  onChange={(e) => setFormBaseUrl(e.target.value)}
+                  placeholder="https://docs.google.com/forms/d/e/xxxxx/viewform"
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3 py-2 font-mono text-sm"
+                />
+                <p className="text-xs text-on-surface-variant mt-1">
+                  年に一度リンクが変わるフォームなので、変わったらここを更新してください
+                </p>
+              </div>
+              <p className="text-xs text-on-surface-variant">
+                実行すると、今月分の対象月とGoogleカレンダーから集計した出社日(勤務地が「02_東京本社」の日)を
+                事前入力済みの交通費申請フォームが新しいタブで開きます(他の項目は固定で設定変更はできません)
+              </p>
+            </>
           ) : kind === "gmail_draft" ? (
             <>
               <div>

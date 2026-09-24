@@ -139,13 +139,18 @@ export interface SlackAccount {
   created_at: string;
 }
 
-export type WorkflowKind = "gmail_draft" | "slack_create_channel" | "train_delay";
+export type WorkflowKind = "gmail_draft" | "slack_create_channel" | "train_delay" | "commute_expense";
 
 export interface SlackCreateChannelConfig {
   workspaceId: string;
   channelNameTemplate: string;
   visibility: "private" | "public";
   inviteUserIds: string[];
+}
+
+export interface CommuteExpenseConfig {
+  // 交通費申請フォームは年に一度リンクが変わるため、URLだけは設定で変更できるようにする
+  formBaseUrl: string;
 }
 
 export interface Workflow {
@@ -156,7 +161,7 @@ export interface Workflow {
   to_emails: string | null;
   subject: string | null;
   body: string | null;
-  config: Partial<SlackCreateChannelConfig>;
+  config: Partial<SlackCreateChannelConfig> & Partial<CommuteExpenseConfig>;
   created_at: string;
   updated_at: string;
 }
@@ -197,6 +202,7 @@ export interface CalendarEvent {
   end: string;
   allDay: boolean;
   description: string | null;
+  location: string | null;
   meetUrl: string | null;
 }
 
